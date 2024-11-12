@@ -86,7 +86,8 @@ convertire .xml in html `j4k1dibe@htb[/htb]$ xsltproc target.xml -o target.html`
 # Service Enumeration
 e' essenziale determinare quali servizi e quali versioni girano su una porta.
 per ragioni di velocita' conviene prima fare una scan con `-p-` su tutte le parte e poi forse `-sV`.
-`--stats-every=5s`: per visualizzare le statistiche della scan ogni 5 secondi
+`--stats-every=5s`: per visualizzare le statistiche della scan ogni 5 secondi.
+Per rilevare l' OS runniamo l' **OS Detection** con `-O`
 
 ## Banner Grabbing
 Basterebbe fare `-sV` per prendere i Banner e capire la versione ma a volte se Nmap non riesce a capire.
@@ -114,4 +115,49 @@ oppure possiamo grabbare il banner con Nc: `j4k1dibe@htb[/htb]$  nc -nv 10.129.2
 |vuln| Identification of specific vulnerabilities.|
 
 
+## Default scripts
+`-sC`.
+`j4k1dibe@htb[/htb]$ sudo nmap <target> -sC`
+
+## Specific Scripts Category
+`j4k1dibe@htb[/htb]$ sudo nmap <target> --script <category>`
+
+## Defined Scripts
+`j4k1dibe@htb[/htb]$ sudo nmap <target> --script <script-name>,<script-name>,...`
+
+## Aggressive Option
+`-A` runna automaticamente una scan con molte flag cone `-sV`, `-sC`, `-O`, `--traceroute`
+
+## Vulnerability assesment con Nmap
+
+usando `--script vuln` runneremo molti script per verificare se ci sono vulnerabilita', CVE ma non solo.
+
+# Performance
+- `-T <0-5>` specificare velocita', default e' T 3
+- `--min-parallelism <number>`, con che frequenza
+- `--max-rtt-timeout <time>`. specifica in secondi il max timeout per il **Round Trip Time**, di default e' 100ms
+- `--min-rate <number`, specifica quanti pacchetti devono essere mandati contemporaneamente
+- `--max-retries <number>`, specifica quanti tentativi per porta
+
+
+# Firewall e IDS/IPS Evasion
+quando il pacchetto viene rejectato ci arrivano alcuni ICMP error codes.
+
+la scan **TCP ACK Scan** (che si fa con flag `-sA`) e' molto piu' difficile da filtrare per i firewall e IDS/IPS rispetto alla normale `-sS` SYN scan o alla `-sT` Connect scan perche' manda un pacchetto solo con la **ACK**. Riesce a bypassare i controlli perche' il Firewall non riesce a determinare se il pacchetto appartiene ad una connessione gia' stabilita.
+
+- Specificare indirizzo IP di sorgente `-S`,
+- Specificare porta di sorgente `--source-port`. (magari ad esempio un firewall permette traffico DNS da porta 53).
+
+## Decoys
+a volte un admin potrebbe backlistare certe sottoreti dall' interagire con altre.  oppure l' IPS potrebbe bloccare noi.
+Per fortuna esiste la **Decoy scan** che consiste nel generare vari indirizzi IP random e cambiare gli header dei pacchetti IP. comunque e' meglio se i decoy sono alive altrimenti il servizio potrebbe essere unreachable.
+
+Scan usando i decoy `j4k1dibe@htb[/htb]$ sudo nmap 10.129.2.28 -p 80 -sS -Pn -n --disable-arp-ping --packet-trace -D RND:5`
+utilizza 5 Decoy generati casualmente.
+
+Con la flag `-S` possiamo specificare l' indirizzo IP sorgente fittizio.
+
+## DNS Proxying
+Di default Nmap fa una Reverse DNS resolution.
+possiamo specificare il norsto server DNS con `--dns-server <ns>, <ns>`. molto utile ad esempio se vogliamo usare un DNS della rete aziendale.
 
