@@ -84,4 +84,34 @@ la flag `-sV` cerca di trovare quale servizio e quale versione del servizio giro
 convertire .xml in html `j4k1dibe@htb[/htb]$ xsltproc target.xml -o target.html`.
 
 # Service Enumeration
-e' 
+e' essenziale determinare quali servizi e quali versioni girano su una porta.
+per ragioni di velocita' conviene prima fare una scan con `-p-` su tutte le parte e poi forse `-sV`.
+`--stats-every=5s`: per visualizzare le statistiche della scan ogni 5 secondi
+
+## Banner Grabbing
+Basterebbe fare `-sV` per prendere i Banner e capire la versione ma a volte se Nmap non riesce a capire.
+possiamo provare a usare `--packet-trace` per vedere effettivamente che succede.
+
+oppure possiamo grabbare il banner con Nc: `j4k1dibe@htb[/htb]$  nc -nv 10.129.2.28 25`.
+
+
+# Nmap Scripting Engine
+| Category | Description |
+|-----------|-----------|
+|auth| Determination of authentication credentials. |
+|broadcast|	Scripts, which are used for host discovery by broadcasting and the discovered hosts, can be automatically added to the remaining scans.|
+|brute| Executes scripts that try to log in to the respective service by brute-forcing with credentials.|
+|default| Default scripts executed by using the -sC option.|
+|discovery|	Evaluation of accessible services.|
+|dos| These scripts are used to check services for denial of service vulnerabilities and are used less as it harms the services.|
+|exploit| This category of scripts tries to exploit known vulnerabilities for the scanned port.|
+|external| Scripts that use external services for further processing.|
+|fuzzer| This uses scripts to identify vulnerabilities and unexpected packet handling by sending different fields, which can take much time.|
+|intrusive|	Intrusive scripts that could negatively affect the target system.|
+|malware|	Checks if some malware infects the target system.|
+|safe| Defensive scripts that do not perform intrusive and destructive access.|
+|version|	Extension for service detection.|
+|vuln| Identification of specific vulnerabilities.|
+
+
+
