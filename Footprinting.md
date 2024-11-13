@@ -510,3 +510,4 @@ Per prevenire che la mail sia presa dai filtri antispam il sender puo' usare un 
 ## Footprinting the service
 con nmap `smtp-commands` possiamo listare i comandi che possiamo eseguire sul server SMTP.
 con nmap `smtp-open-relay` script possiamo verificare serve con un open relay.
+con nmap 'smtp-enum-users' si possono enumerare gli utenti.
