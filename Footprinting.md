@@ -420,6 +420,92 @@ Si puo' fare con alcuni tool tipo gobuster o ffuf ma anche in bash
 
 con **DNSenum**
 `j4k1dibe@htb[/htb]$ dnsenum --dnsserver 10.129.14.128 --enum -p 0 -s 0 -o subdomains.txt -f /opt/useful/seclists/Discovery/DNS/subdomains-top1million-110000.txt inlanefreight.htb`.
- 
+
+ # SMTP
+Simple Mail Transfer Protocol e' un protocollo per mandare email in una rete IP.
+Si puo' usare tra un email client e un outgoing mail server o tra server SMTP.
+Si usa combinato con IMAP o POP3 che possono fetchare e mandare email.
+Di default accetta connessioni su porta **25** ma server nuovi usano anche porta TCP **587** per ricevere mail da utenti/server autenticati usando il comando **STARTTLS** per switchare connessione plaintext in criptata.
+
+SMTP lavora non criptato e manda tutto in plaintext. per prevenire si usa insieme a SSL/TLS, in questi casi si usano porte diverse.
+
+Una funzione importante dei server SMTP e' prevenire SPAM usando autenticazione.
+Lo fa con estensione  **ESMTP** del protocollo con SMTP-Auth. dopo mandare le mail il **Mail User Agent (MUA)** client SMTP converte in un header e body e manda al server SMTP.
+Il server avra' un **Mail Transfer Agent(MTA)** il software per mandare/ricever email, lui checka per lo spam.
+A volte c'e' pure il **Mail Submission Agent(MSA)**, per togliere carico al MTA.
+I MTA sono anche detti **Relay** server e si puo' fare un attacco chiamato **Open Relay Attack** a causa di alcune 
+
+Quando arriva al server SMTP di destinazione viene riformata l'email originale e il **Mail Delivery Agent(MDA)** lo trasferisce al mailbox.
+**POP3/IMAP ---> MailBox**
+
+Problemi:
+- SMTP non ritorna conferma di ricezione della mail.
+- Quando si fa una connessione gli utenti non sono autenticati
+- 
+identification protocol DomainKeys (DKIM), the Sender Policy Framework (SPF).
+
+**ESMTP** e' l' estensione di SMTP con TLS 
+
+## Default configuration
+si trova in `/etc/postfix/main.cf`
+
+|Command|	Description|
+|------|-----------|
+AUTH PLAIN|	AUTH is a service extension used to authenticate the client.
+HELO|	The client logs in with its computer name and thus starts the session.
+MAIL FROM|	The client names the email sender.
+RCPT TO|	The client names the email recipient.
+DATA|	The client initiates the transmission of the email.
+RSET|	The client aborts the initiated transmission but keeps the connection between client and server.
+VRFY|	The client checks if a mailbox is available for message transfer.
+EXPN|	The client also checks if a mailbox is available for messaging with this command.
+NOOP|	The client requests a response from the server to prevent disconnection due to time-out.
+QUIT|	The client terminates the session.
+
+Per interagire con il server SMTP possiamo usare il tool **telnet**  a porta 25 e mandando il comando **HELO** o **EHLO**.
+
+comando **VRFY <user>** si puo' usare per enumerate utenti esistenti nel sistema.
+Non funziona sempre, dipende dalla configurazione. se il server SMTP ritorna **codice 252** conferma la NON esistenza dell' utente.
+
+## Send an Email
+- Prima mando **HELO/EHLO <mailserver>**
+- ```
+MAIL FROM: <cry0l1t3@inlanefreight.htb>
+
+250 2.1.0 Ok
 
 
+RCPT TO: <mrb3n@inlanefreight.htb> NOTIFY=success,failure
+
+250 2.1.5 Ok
+
+
+DATA
+
+354 End data with <CR><LF>.<CR><LF>
+
+From: <cry0l1t3@inlanefreight.htb>
+To: <mrb3n@inlanefreight.htb>
+Subject: DB
+Date: Tue, 28 Sept 2021 16:32:51 +0200
+Hey man, I am trying to access our XY-DB but the creds don't work. 
+Did you make any changes there?
+.
+
+250 2.0.0 Ok: queued as 6E1CF1681AB
+
+
+QUIT
+
+221 2.0.0 Bye
+Connection closed by foreign host.```
+
+## Dangerous settings
+Per prevenire che la mail sia presa dai filtri antispam il sender puo' usare un relay server che e' trustato dal recipiente.
+
+### Open Relay Configuration
+`mynetworks = 0.0.0.0/0`, conq questo setting il server SMTP puo' mandare email false e inizializzare comunicazione tra piu' parti. inoltre puo' spoofare le mail e leggerle.
+
+## Footprinting the service
+con nmap `smtp-commands` possiamo listare i comandi che possiamo eseguire sul server SMTP.
+con nmap `smtp-open-relay` script possiamo verificare serve con un open relay.
