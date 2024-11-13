@@ -139,14 +139,14 @@ usare i comandi `debug`, `trace` e `status` per avere output piu' dettagliati ne
 
 |Settings|	Description|
 |--------|-------------|
-dirmessage_enable=YES	Show a message when they first enter a new directory?
-chown_uploads=YES	Change ownership of anonymously uploaded files?
-chown_username=username	User who is given ownership of anonymously uploaded files.
-local_enable=YES	Enable local users to login?
-chroot_local_user=YES	Place local users into their home directory?
-chroot_list_enable=YES	Use a list of local users that will be placed in their home directory?
-hide_ids=YES	All user and group information in directory listings will be displayed as "ftp".
-ls_recurse_enable=YES	Allows the use of recurse listings.
+dirmessage_enable=YES|	Show a message when they first enter a new directory?
+chown_uploads=YES|	Change ownership of anonymously uploaded files?
+chown_username=username|	User who is given ownership of anonymously uploaded files.
+local_enable=YES|	Enable local users to login?
+chroot_local_user=YES|	Place local users into their home directory?
+chroot_list_enable=YES|	Use a list of local users that will be placed in their home directory?
+hide_ids=YES|	All user and group information in directory listings will be displayed as "ftp".
+ls_recurse_enable=YES|	Allows the use of recurse listings.
 
 ## Recursive Listing
 con il comando `ls -R` possiamo listare ricorsivamente la directory
@@ -194,17 +194,17 @@ l' assegnazione del nome avviene tramite la **name registration procedure**; ogn
 
 |Setting|	Description|
 |-------|------------|
-[sharename]	The name of the network share.
-workgroup = WORKGROUP/DOMAIN	Workgroup that will appear when clients query.
-path = /path/here/	The directory to which user is to be given access.
-server string = STRING	The string that will show up when a connection is initiated.
-unix password sync = yes	Synchronize the UNIX password with the SMB password?
-usershare allow guests = yes	Allow non-authenticated users to access defined share?
-map to guest = bad user	What to do when a user login request doesn't match a valid UNIX user?
-browseable = yes	Should this share be shown in the list of available shares?
-guest ok = yes	Allow connecting to the service without using a password?
-read only = yes	Allow users to read files only?
-create mask = 0700	What permissions need to be set for newly created files?
+[sharename]|	The name of the network share.
+workgroup = WORKGROUP/DOMAIN|	Workgroup that will appear when clients query.
+path = /path/here/|	The directory to which user is to be given access.
+server string = STRING|	The string that will show up when a connection is initiated.
+unix password sync = yes|	Synchronize the UNIX password with the SMB password?
+usershare allow guests = yes|	Allow non-authenticated users to access defined share?
+map to guest = bad user|	What to do when a user login request doesn't match a valid UNIX user?
+browseable = yes|	Should this share be shown in the list of available shares?
+guest ok = yes|	Allow connecting to the service without using a password?
+read only = yes|	Allow users to read files only?
+create mask = 0700|	What permissions need to be set for newly created files?
 
 ## Dangerous Settings
 
@@ -220,3 +220,45 @@ directory mask = 0777|	What permissions must be assigned to the newly created di
 logon script = script.sh|	What script needs to be executed on the user's login?
 magic script = script.sh|	Which script should be executed when the script gets closed?
 magic output = script.out|	Where the output of the magic script needs to be stored?
+
+## SMBclient, connettersi alle shares
+`j4k1dibe@htb[/htb]$ smbclient -N -L //10.129.14.128` enumerare e shares.
+le share print$ e IPC$ sono di default nei basic settings.
+`j4k1dibe@htb[/htb]$ smbclient //10.129.14.128/notes` loggare in una share
+`!<cmd\>` si usa per eseguire local system commands. tipo `!ls`.
+Scaricare e uploadare sempre `get` e `put`.
+
+## Footprinting the service
+
+con nmap possiamo fare la scan alle porte **139 e 445**.
+
+### RPCclient
+e' un tool per eseguire funzioni MS-RPC. (chiama una funzione su un server remoto).
+`j4k1dibe@htb[/htb]$ rpcclient -U "" 10.129.14.128`. Questo per connettersi. dopo possiamo fare le richieste
+il comando rpcclient ci da molte richieste che possiamo fare al sever SMB
+
+eccone alcune:
+|Query|	Description|
+|-------|------------|
+srvinfo|	Server information.
+enumdomains|	Enumerate all domains that are deployed in the network.
+querydominfo|	Provides domain, server, and user information of deployed domains.
+netshareenumall|	Enumerates all available shares.
+netsharegetinfo <share>|	Provides information about a specific share.
+enumdomusers|	Enumerates all domain users.
+queryuser <RID>|	Provides information about a specific user.
+querygroup <group_RID>| Provide info about a specifi group
+
+## Bruteforcing User RIDs con RPCclient
+`j4k1dibe@htb[/htb]$ for i in $(seq 500 1100);do rpcclient -N -U "" 10.129.14.128 -c "queryuser 0x$(printf '%x\n' $i)" | grep "User Name\|user_rid\|group_rid" && echo "";done`
+in alternativa si puo' usare un  python script d **Impacket** chiamato **samrdump.py**: `j4k1dibe@htb[/htb]$ samrdump.py 10.129.14.128`.
+
+## Altri tools
+Queste enumerazioni si possono fare anche con altri tools
+### SMBmap
+`j4k1dibe@htb[/htb]$ smbmap -H 10.129.14.128`
+
+### CrackMapExec
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.14.128 --shares -u '' -p ''`
+### Enum4linux
+`j4k1dibe@htb[/htb]$ ./enum4linux-ng.py 10.129.14.128 -A`
