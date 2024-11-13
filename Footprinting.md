@@ -413,7 +413,8 @@ TLD(Top level domains) avranno pure i Second Level Domain.
 
 ## Subdomain Brute Forcing
 Si puo' fare con alcuni tool tipo gobuster o ffuf ma anche in bash
-`j4k1dibe@htb[/htb]$ for sub in $(cat /opt/useful/seclists/Discovery/DNS/subdomains-top1million-110000.txt);do dig $sub.inlanefreight.htb @10.129.14.128 | grep -v ';\|SOA' | sed -r '/^\s*$/d' | grep $sub | tee -a subdomains.txt;done`.
+`for sub in $(cat /home/kali/roba/kali-wordlists/amass/subdomains-top1mil-110000.txt);do dig $sub.inlanefreight.htb @10.129.171.45
+ | grep -v ';\|SOA' | sed -r '/^\s*$/d' | grep $sub | tee -a subdomains.txt;done`.
 
 con **DNSenum**
 `j4k1dibe@htb[/htb]$ dnsenum --dnsserver 10.129.14.128 --enum -p 0 -s 0 -o subdomains.txt -f /opt/useful/seclists/Discovery/DNS/subdomains-top1million-110000.txt inlanefreight.htb`.
