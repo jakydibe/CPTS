@@ -1,5 +1,6 @@
 # Footprinting
 RIGUARDARE BENE SEZIONE DNS. TROPPO NOIOSA NON CI HO CAPITO MOLTO
+Rileggere SMTP
 
 ## Domain informations
 E' importante trovare la presenza in internet di un certo dominio.
