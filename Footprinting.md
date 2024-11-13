@@ -267,4 +267,54 @@ Queste enumerazioni si possono fare anche con altri tools
 # NFS
 Network File System e' un network filesystem che ha lo stesso scopo di SMB, ovvero accedere a file su una rete come se fossero locali.
 Pero' usa un protocollo completamente diverso. si usa tra sistemi Linux e Unix, quindi non puo' comunicare direttamente con SMB servers.
-dopo NFSv4 l'utente si deve autenticare
+dopo NFSv4 l'utente si deve autenticare e si usa solo la porta 2049.
+
+NFS e' basato su Open Network Computing Remote Procedure Call (ONC-RPC/SUN-RPC) protocol. che gira su porta TCP e UDP 111, e usa la External Data Representation (XDR) per scambio di dati.
+Di base NFS non ha meccaniscmi di autenticazione o autorizzazione, l' autenticazione e; spostata al protoccolo RPC.
+L' autenticazione piu' comunie e' tramite UNIX UID/GID e group memberships. tuttavia il client e il server potrebbero non avere lo stesos mapping di UID/GID.
+
+## Default configuration
+`/etc/exports` contiene una tabella del filesystem fisico in un server NFS e che e' accessibile ai client.
+|Option|	Description|
+|-------|------------|
+rw|	Read and write permissions.
+ro|	Read only permissions.
+sync|	Synchronous data transfer. (A bit slower)
+async|	Asynchronous data transfer. (A bit faster)
+secure|	Ports above 1024 will not be used.
+insecure|	Ports above 1024 will be used.
+no_subtree_check|	This option disables the checking of subdirectory trees.
+root_squash|	Assigns all permissions to files of root UID/GID 0 to the UID/GID of anonymous, which prevents root from accessing files on an NFS mount.
+
+il  comando `exportfs` fa vedere le directory exportate.
+
+## Dangerous Settings
+|Option|	Description|
+|-------|------------|
+rw|	Read and write permissions.
+insecure|	Ports above 1024 will be used.
+nohide|	If another file system was mounted below an exported directory, this directory is exported by its own exports entry.
+no_root_squash|	All files created by root are kept with the UID/GID 0.
+
+Insecure e' pericolosa perche' le porte sotto 1024 richiedono permessi da root, quindi se invece possiamo usare porte piu' di 1024 gli user possono usare sockets.
+
+## Footprinting the service
+
+con nmap facciamo scan a porte **111,2049** con `-sV` e `-sC`.
+lo script nmap `rpcinfo` prende una ista di RPC services con nomi e descrizioni.
+
+`j4k1dibe@htb[/htb]$ sudo nmap --script nfs* 10.129.14.128 -sV -p111,2049` runno script di nmap per enumerare NFS.
+`j4k1dibe@htb[/htb]$ showmount -e 10.129.14.128` per mostrare le exports.
+
+una volta scoperto un servizio NFS possiamo montarlo in locale.
+```
+j4k1dibe@htb[/htb]$ mkdir target-NFS
+j4k1dibe@htb[/htb]$ sudo mount -t nfs 10.129.14.128:/ ./target-NFS/ -o nolock
+j4k1dibe@htb[/htb]$ cd target-NFS
+j4k1dibe@htb[/htb]$ tree .
+```
+dopo li possiamo vedere come fie locali quindi `ls -l` e `ls -n` per vedere UID e GUIDs
+
+**Si puo' usare NFS per fare scalation** ad esempio quando abbiamo accesso SSH ad una machcina e vogliamo leggere file da un' altra cartella che uno specifico utente puo' leggere. avremo bisogno di uploadare una shell nella NFS share che ha il SUID di quell' utente e runnare la shell tramite utente SSH.
+
+`sudo umoung ./target-NFS` per eliminare la share
