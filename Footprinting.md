@@ -150,3 +150,58 @@ ls_recurse_enable=YES	Allows the use of recurse listings.
 
 ## Recursive Listing
 con il comando `ls -R` possiamo listare ricorsivamente la directory
+
+## comandi base ftp
+`get` per scaricare file in locale.
+`put` per uploadare file.
+
+## Scarica tutti i file available
+`j4k1dibe@htb[/htb]$ wget -m --no-passive ftp://anonymous:anonymous@10.129.14.136`
+
+## Footprinting di FTP
+Possiamo usare anche Nmap NSE con gli script per FTP.
+prima aggiorniamo il db di scripts: `sudo nmap --script-updatedb`.
+gli script stanno in `/usr/share/nmap/scripts/`
+per trovarli usiamo questo comando: `j4k1dibe@htb[/htb]$ find / -type f -name ftp* 2>/dev/null | grep scripts`
+per tracciare gli script aggiungiamo la flag `--script-trace` di nmap.
+
+## Service interaction
+Possiamo interagire con FTP anche con altri client quali **netcat** e **telnet** e **openssl**.
+`nc -nv IP PORT`.
+`telnet IP PORT`.
+`j4k1dibe@htb[/htb]$ openssl s_client -connect 10.129.14.136:21 -starttls ftp`. questo perche; il certificato SSL ci fa riconoscere l' hostname e email address della compagnia.
+
+
+# SMB
+SMB e' un protocollo TCP client-server che regola l' accesso a file e directory e risorse di rete tipo stampanti, router etc.etc.
+Lo scambio di informazioni e dati si puo' fare tramite protocollo SMB che e' anche di default nelle macchine Windows.
+
+Un server SMB puo' dare parti arbitrarie del suo file system locale come **shares** visibili ai client. 
+GLi Access right sono definiti da **Access Control Lists (ACL)**.
+
+## Samba
+Samba (SMB/CIFS)e' un' implementazione alternativa del Server SMB ed e' sviluppata per sistemi Unix-baseed. 
+Samba implementa il **Common Internet File SYstem(CIFS)**, che e' un dialetto di SMB. Questo permette a Samba di comunicare con sistemi windows moderni.
+
+In una rete ogni host partecipa nello stesso **workgroup**. Un **Workgroup** e' un gruppo  che indetnficia una collezione di computer e le loro risorse in una rete SMB. Ci possono essere piu' workhroup sulla rete.
+IBM ha fatto un API per connettere computer e si chiama **Network Basic Input/Output System (NetBIOS)**.
+La NetBIOS api permette ai pc in LAN di scambairsi dati e altra roba. In NetBIOS ogni PC della rete ha un nome univoco (invece degli IP),
+l' assegnazione del nome avviene tramite la **name registration procedure**; ogni host ha il suo hostname nella rete e il **NetBIOS Name Server (NBNS) e'si occupa di gesitre questo**. Adesso c'e' pure il **WIndows Internet Name Server (WINS)**.
+
+## Default Configuration
+`/etc/samba/smb.conf` e' dove si trova la conf.
+`cat /etc/samba/smb.conf | grep -v "#\|\;" `
+
+|Setting|	Description|
+|-------|------------|
+[sharename]	The name of the network share.
+workgroup = WORKGROUP/DOMAIN	Workgroup that will appear when clients query.
+path = /path/here/	The directory to which user is to be given access.
+server string = STRING	The string that will show up when a connection is initiated.
+unix password sync = yes	Synchronize the UNIX password with the SMB password?
+usershare allow guests = yes	Allow non-authenticated users to access defined share?
+map to guest = bad user	What to do when a user login request doesn't match a valid UNIX user?
+browseable = yes	Should this share be shown in the list of available shares?
+guest ok = yes	Allow connecting to the service without using a password?
+read only = yes	Allow users to read files only?
+create mask = 0700	What permissions need to be set for newly created files?
