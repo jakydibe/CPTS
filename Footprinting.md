@@ -262,3 +262,9 @@ Queste enumerazioni si possono fare anche con altri tools
 `j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.14.128 --shares -u '' -p ''`
 ### Enum4linux
 `j4k1dibe@htb[/htb]$ ./enum4linux-ng.py 10.129.14.128 -A`
+
+
+# NFS
+Network File System e' un network filesystem che ha lo stesso scopo di SMB, ovvero accedere a file su una rete come se fossero locali.
+Pero' usa un protocollo completamente diverso. si usa tra sistemi Linux e Unix, quindi non puo' comunicare direttamente con SMB servers.
+dopo NFSv4 l'utente si deve autenticare
