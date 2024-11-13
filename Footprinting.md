@@ -1,4 +1,6 @@
 # Footprinting
+RIGUARDARE BENE SEZIONE DNS. TROPPO NOIOSA NON CI HO CAPITO MOLTO
+
 ## Domain informations
 E' importante trovare la presenza in internet di un certo dominio.
 Il primo punto di presenza potrebbe essere il **certificato SSL**. usa `crt.sh` per trovarli.
