@@ -546,3 +546,37 @@ Il server SMTP del provider si occupa di consegnare il messaggio alla casella di
 1 FETCH <ID> all|	Retrieves data associated with a message in the mailbox.
 1 CLOSE|	Removes all messages with the Deleted flag set.
 1 LOGOUT|	Closes the connection with the IMAP serv
+
+## Comandi POP3
+|Command|	Description|
+|-------|------------|
+USER username|	Identifies the user.
+PASS password|	Authentication of the user using its password.
+STAT|	Requests the number of saved emails from the server.
+LIST|	Requests from the server the number and size of all emails.
+RETR id|	Requests the server to deliver the requested email by ID.
+DELE id|	Requests the server to delete the requested email by ID.
+CAPA|	Requests the server to display the server capabilities.
+RSET|	Requests the server to reset the transmitted information.
+QUIT|	Closes the connection with the POP3 server.
+
+## Dangerous settings
+Di solito le aziende si affidano a servizi mail di 3e parti. tuttavia potrebbe capitare che alcune di loro hanno piccoli server mail
+
+|Setting|	Description|
+|-------|------------|
+auth_debug|	Enables all authentication debug logging.
+auth_debug_passwords|	This setting adjusts log verbosity, the submitted passwords, and the scheme gets logged.
+auth_verbose|	Logs unsuccessful authentication attempts and their reasons.
+auth_verbose_passwords|	Passwords used for authentication are logged and can also be truncated.
+auth_anonymous_username|	This specifies the username to be used when logging in with the ANONYMOUS SASL mechanism.
+
+## Footprinting the Service
+di default:
+- POP3 porta **100 e 995**, 995 SSL/TLS.
+- IMAP porte **143 e 993**, 993 SSL/TLS.
+
+con **cURL**: `j4k1dibe@htb[/htb]$ curl -k 'imaps://10.129.14.128' --user user:p4ssw0rd -v`.
+
+**OpenSSL per TLS POP3**: `j4k1dibe@htb[/htb]$ openssl s_client -connect 10.129.14.128:pop3s`.
+**OpenSSL per TLS IMAP**: `j4k1dibe@htb[/htb]$ openssl s_client -connect 10.129.14.128:imaps`
