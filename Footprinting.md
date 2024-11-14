@@ -544,6 +544,8 @@ Il server SMTP del provider si occupa di consegnare il messaggio alla casella di
 1 SELECT INBOX|	Selects a mailbox so that messages in the mailbox can be accessed.
 1 UNSELECT INBOX|	Exits the selected mailbox.
 1 FETCH -ID- all|	Retrieves data associated with a message in the mailbox.
+1 SEARCH all| Per vedere tutti gli ID dei messagig nella mailbox
+1 FETCH -ID- BODY[TEXT]| per leggere il contenuto della mail
 1 CLOSE|	Removes all messages with the Deleted flag set.
 1 LOGOUT|	Closes the connection with the IMAP serv
 
