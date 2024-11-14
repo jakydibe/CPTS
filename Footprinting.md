@@ -630,4 +630,19 @@ rwuser noauth|	Provides access to the full OID tree without authentication.
 rwcommunity -community string- -IPv4 address-|	Provides access to the full OID tree regardless of where the requests were sent from.
 rwcommunity6 -community string- -IPv6 address-|	Same access as with rwcommunity with the difference of using IPv6.
 
+## Footprinting The Service
+tool:
+- **snmpwalk**, per prendere gli OIDs e le loro info.
+- **onesixtyone**, per brute-forzare i nomi delle community strings dato che possono essere specificati dagli admin
+- **braa**, quando sappiamo la coomunity string possiamo bruteforzare i singoli OIDs e enumerare le info.
+`j4k1dibe@htb[/htb]$ snmpwalk -v2c -c public 10.129.14.128`.
+
+`j4k1dibe@htb[/htb]$ onesixtyone -c /opt/useful/seclists/Discovery/SNMP/snmp.txt 10.129.14.128`.
+`j4k1dibe@htb[/htb]$ braa <community string>@<IP>:.1.3.6.*`.
+`j4k1dibe@htb[/htb]$ braa public@10.129.14.128:.1.3.6.*`
+
+si puo' usare tool come **crunch** per creare custom wordlists
+
+  
+
 
