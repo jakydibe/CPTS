@@ -511,3 +511,22 @@ Per prevenire che la mail sia presa dai filtri antispam il sender puo' usare un 
 con nmap `smtp-commands` possiamo listare i comandi che possiamo eseguire sul server SMTP.
 con nmap `smtp-open-relay` script possiamo verificare serve con un open relay.
 con nmap 'smtp-enum-users' si possono enumerare gli utenti.
+
+
+# IMAP/POP3
+## IMAP (Internet Message Access Protocol): 
+è un protocollo usato per accedere ai messaggi di posta elettronica direttamente sul server, senza scaricarli localmente. Questo significa che i messaggi rimangono sul server e sono sincronizzati tra tutti i dispositivi. Con IMAP:
+
+- Puoi visualizzare e gestire la posta da diversi dispositivi.
+- I messaggi rimangono sul server a meno che non vengano cancellati manualmente.
+- Le cartelle e la struttura della casella postale sono sincronizzate tra i dispositivi.
+## POP3 (Post Office Protocol 3):
+è un protocollo che scarica i messaggi dal server sul dispositivo locale e, per impostazione predefinita, li rimuove dal server. Questo significa che:
+
+- La posta non è sincronizzata tra dispositivi diversi.
+- Dopo il download, i messaggi restano solo sul dispositivo da cui è stato effettuato il download (salvo configurazioni diverse).
+- POP3 è utile se si desidera gestire la posta offline o se si ha poco spazio sul server.
+**SMTP (Simple Mail Transfer Protocol)** invece è il protocollo utilizzato per inviare messaggi di posta elettronica. Mentre IMAP e POP3 sono protocolli usati per ricevere la posta, SMTP è usato esclusivamente per l'invio. Con SMTP:
+
+Il client invia i messaggi al server di posta in uscita (SMTP) per la consegna.
+Il server SMTP del provider si occupa di consegnare il messaggio alla casella di posta del destinatario.
