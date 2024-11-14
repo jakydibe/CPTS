@@ -572,6 +572,7 @@ auth_verbose_passwords|	Passwords used for authentication are logged and can als
 auth_anonymous_username|	This specifies the username to be used when logging in with the ANONYMOUS SASL mechanism.
 
 ## Footprinting the Service
+con nmap: `j4k1dibe@htb[/htb]$ sudo nmap 10.129.14.128 -sV -p110,143,993,995 -sC`.
 di default:
 - POP3 porta **100 e 995**, 995 SSL/TLS.
 - IMAP porte **143 e 993**, 993 SSL/TLS.
