@@ -583,3 +583,51 @@ con **cURL**: `j4k1dibe@htb[/htb]$ curl -k 'imaps://10.129.14.128' --user user:p
 
 **OpenSSL per TLS POP3**: `j4k1dibe@htb[/htb]$ openssl s_client -connect 10.129.14.128:pop3s`.
 **OpenSSL per TLS IMAP**: `j4k1dibe@htb[/htb]$ openssl s_client -connect 10.129.14.128:imaps`
+
+# SNMP (Simple Network Management Protocol)
+E' stato creato per gestire dispositivi di rete. E' usato per gestire configurazioni e cambiare settings a remoto.
+Gestisce roba tipo router, switch, server, dispositivi IoT etc.etc..
+
+La versione attuale e' **SNMPv3**.
+Oltre allo scambio di informazioni SNMP trasmette comandi di controlllo ai suoi agenti sulle macchine tramite la porta **UDP 161**.
+Principalmnte sono i client che tramite gli agenti comunicano con il server SNMP; Pero' SNMP ha pure abilitato l' uso delle **traps** che tramite porta **UDP 162**, il Server SNMP manda pacchetti al client senza che siano stati richiesti, solitamente vengono mandati quando uno specifico eventu in server-side accade.
+
+## MIB
+Per funzionare SNMP ha bisogno di un sistema di addressing tra client e server.
+il MIB (Management Information Base) e' stato creato come formato per storare device informations. un MIB e' un text file dove Tutti i SNMP oggetti di un device sono listati in uno albero gerarchico standardizzato.
+Contiene almeno un **Object Identifier (OID)** dove in aggiunt al necessario indirizzo e  nome, da anche informazioni sul tipo, diritti di accesso e descrizione del rispettivo oggetto.
+
+I file MIB sono scritti nela **Abstract Syntax Notation One (ASN.1)** basato su formato testo ASCII. il MIB non contiene dati ma spiega DOVE trovar ele informazioni.
+
+## OID
+Un OID rappresenta un nodo in un namespace gerarchico. una sequenza di numeri che identifica univocamente un nodo.
+Utile per determinare la posizione di un Nodo in un albero. Piu' lunga la catena, piu' specifiche le info.
+Molti nodi OID contengon solo reference a quelli sotto di loro.
+OID e' fatto da interi concatenati da notazione dot.
+
+## SNMPv1
+- Ancora molto usata in piccole reti.
+- Non ha meccanismi di autenticazione built-in
+- Non supporta encryption
+
+## SNMPv2
+Esiste ancora oggi in versione **v2c**. 'c' sta per community based.
+Ancora no built in encryption
+
+## SNMPv3 
+E' stat aggiunta autenticazione e encrytpion con pre-shared key.
+
+## Community Strings
+Le community strings possono essere viste come password per determinare se le informazioni richieste possono essere viste o no.
+
+## Default configuration
+il file di conf sta in `/etc/snmp/snmpd.conf`.
+
+## Dangerous Settings
+|Settings|Description|
+|--------|-----------|
+rwuser noauth|	Provides access to the full OID tree without authentication.
+rwcommunity -community string- -IPv4 address-|	Provides access to the full OID tree regardless of where the requests were sent from.
+rwcommunity6 -community string- -IPv6 address-|	Same access as with rwcommunity with the difference of using IPv6.
+
+
