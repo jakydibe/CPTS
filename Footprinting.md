@@ -647,8 +647,68 @@ tool:
 
 `j4k1dibe@htb[/htb]$ braa public@10.129.14.128:.1.3.6.*`
 
-si puo' usare tool come **crunch** per creare custom wordlists
+si puo' usare tool come **crunch** per creare custom wordlist**s
 
-  
+# MySQL
+MySQL e' un DBMS opensource che supporta database relazionali con linugaggio SQL.
+
+funziona con il proncipio di client-server. I database sono spesso salvati in un solo file **.sql**. ES: wordpress.sql.
+
+**MySQL CLients** possono retrievare ed editare i dati usando query al database. Lo possono fare via rete interna o internet pubblico.
+
+Un esempio e' WordPRess che tora tutto nel suo database, accessibile solo al localhost.
+
+**MySQL Database** e' ideato per applicazioni come siti web dinamici dove l' efficienza e' importante.
+Spesso MySQL e' combinato con Linux, PHP e server web APache. (**LAMP** Linux, Apache, MySQL,PHP) o con Nginx LEMP
+
+
+## MySQL Commands
+Spesso quando il database ritorna errori puo' dare informazioni molto importanti per verificare anche se c'e' una SQL Injection.
+
+**MariaDB** e' una fort del MySQL originale, il creatore originale ha lasciato MySQL quando e' stato acquisito da Oracle.
+
+## Default Configuration
+il file di configurazione sta in : `/etc/mysqp/mysql.conf.d/mysqld.conf`.
+
+## Dangerous Settings
+|Settings|	Description|
+|--------|-------------|
+user|	Sets which user the MySQL service will run as.
+password|	Sets the password for the MySQL user.
+admin_address|	The IP address on which to listen for TCP/IP connections on the administrative network interface.
+debug|	This variable indicates the current debugging settings
+sql_warnings|	This variable controls whether single-row INSERT statements produce an information string if warnings occur.
+secure_file_priv|	This variable is used to limit the effect of data import and export operations.
+
+Attenzione che **user, password e admin_address sono entry messe in Plaintext**.
+
+## Footprinting the service
+Per molte ragioni il servizio puo' essere accessibile dall' esterno. Il server MySQL gira su porta **TCP 3306**.
+
+con nmap: `sudo nmap 10.129.14.128 -sV -sC -p3306 --script mysql*`. Potrebbe tornare alcuni falsi positivi comunque.
+
+`j4k1dibe@htb[/htb]$ mysql -u root -h 10.129.14.132`. iteragire con Mysql
+
+`j4k1dibe@htb[/htb]$ mysql --skip-ssl -u root -pP4SSw0rd -h 10.129.14.128`.
+
+In MySQL i database piu' importanti sono **system schema (sys)** e **information schema (information_schemaa)**. system contiene tabelle e info necessarie per la gestione.
+```
+mysql> use sys;
+mysql> show tables; 
+```
+
+## Comandi utili
+
+|Command|	Description|
+|-------|------------|
+mysql --skip-ssl -u -user- -p-password- -h =IP address- |	Connect to the MySQL server. There should not be a space between the '-p' flag, and the password.
+show databases;|	Show all databases.
+use -database-;|	Select one of the existing databases.
+show tables;|	Show all available tables in the selected database.
+show columns from -table-;|	Show all columns in the selected database.
+select * from \<table\>;|	Show everything in the desired table.
+select * from \<table\> where <column> = "<string>"; | Search for needed string in the desired table.
+
+
 
 
