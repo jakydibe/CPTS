@@ -256,6 +256,8 @@ querygroup <group_RID>| Provide info about a specifi group
 `j4k1dibe@htb[/htb]$ for i in $(seq 500 1100);do rpcclient -N -U "" 10.129.14.128 -c "queryuser 0x$(printf '%x\n' $i)" | grep "User Name\|user_rid\|group_rid" && echo "";done`
 in alternativa si puo' usare un  python script d **Impacket** chiamato **samrdump.py**: `j4k1dibe@htb[/htb]$ samrdump.py 10.129.14.128`.
 
+`smbget -R smb://10.10.118.226/anonymous`, scarica ricorsivamente file dalla share.
+
 ## Altri tools
 Queste enumerazioni si possono fare anche con altri tools
 ### SMBmap
