@@ -756,4 +756,54 @@ connettersi con mssqlclient.py
 `j4k1dibe@htb[/htb]$ python3 mssqlclient.py Administrator@10.129.201.248 -windows-auth`
 
 
+# Oracle TNS
+
+Oracle Transparent Network Substrate e' un protocollo per facilitare la comunicazione tra database Oracle e applicazioni normali.
+
+Supporta vari protocolli quali TCP/IP, IPX/SPX e ha una built-in encryption.
+
+## Default configuration
+di default usa porta **TCP 1521**.
+
+Di default Oracle TNS 8i/9i puo' essrre gestito da remoto ma 10g/11g no.
+
+Il TNS listener autentica con una combinazione di username, password, hostname e IP della macchina che prova ad accedere.
+
+The configuration files for Oracle TNS are called **tnsnames.ora** and **listener.ora** and are typically located in the $ORACLE_HOME/network/admin directory. 
+
+Oracle 9 ha la default password: `CHANGE_ON_INSTALL` mentre Oracle 10 non ha proprio default password.
+
+Il servizio **finger** insieme a ORacle TNS puo' mettere a repentaglio la sicurezza di oracle.
+
+Each database or service has a unique entry in the tnsnames.ora file, containing the necessary information for clients to connect to the service. The entry consists of a name for the service, the network location of the service, and the database or service name that clients should use when connecting to the service.
+
+On the other hand, the listener.ora file is a server-side configuration file that defines the listener process's properties and parameters, which is responsible for receiving incoming client requests and forwarding them to the appropriate Oracle database instance.
+
+In short, the client-side Oracle Net Services software uses the tnsnames.ora file to resolve service names to network addresses, while the listener process uses the listener.ora file to determine the services it should listen to and the behavior of the listener.
+
+Oracle databases can be protected by using so-called PL/SQL Exclusion List (PlsqlExclusionList). It is a user-created text file that needs to be placed in the $ORACLE_HOME/sqldeveloper directory, and it contains the names of PL/SQL packages or types that should be excluded from execution. Once the PL/SQL Exclusion List file is created, it can be loaded into the database instance. It serves as a blacklist that cannot be accessed through the Oracle Application Server.
+
+|Setting|	Description|
+|-------|------------|
+DESCRIPTION	A descriptor that provides a name for the database and its connection type.
+ADDRESS	The network address of the database, which includes the hostname and port number.
+PROTOCOL	The network protocol used for communication with the server
+PORT	The port number used for communication with the server
+CONNECT_DATA	Specifies the attributes of the connection, such as the service name or SID, protocol, and database instance identifier.
+INSTANCE_NAME	The name of the database instance the client wants to connect.
+SERVICE_NAME	The name of the service that the client wants to connect to.
+SERVER	The type of server used for the database connection, such as dedicated or shared.
+USER	The username used to authenticate with the database server.
+PASSWORD	The password used to authenticate with the database server.
+SECURITY	The type of security for the connection.
+VALIDATE_CERT	Whether to validate the certificate using SSL/TLS.
+SSL_VERSION	The version of SSL/TLS to use for the connection.
+CONNECT_TIMEOUT	The time limit in seconds for the client to establish a connection to the database.
+RECEIVE_TIMEOUT	The time limit in seconds for the client to receive a response from the database.
+SEND_TIMEOUT	The time limit in seconds for the client to send a request to the database.
+SQLNET.EXPIRE_TIME	The time limit in seconds for the client to detect a connection has failed.
+TRACE_LEVEL	The level of tracing for the database connection.
+TRACE_DIRECTORY	The directory where the trace files are stored.
+TRACE_FILE_NAME	The name of the trace file.
+LOG_FILE	The file where the log information is stored.
 
