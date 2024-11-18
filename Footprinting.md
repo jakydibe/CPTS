@@ -829,3 +829,52 @@ If you come across the following error sqlplus: error while loading shared libra
 
 
 
+# IPMI
+Intelligent Platform Management Interface e' un una serie di robe e collegamenti proprio hardware che permettono ai sysadmin di gestire un qualsiasi dispositivo indipendentemente da CPU/BIOS OS, anche quando i dispositivi sono spenti.
+
+Usa una connessione diretta all' hardware del computer.
+
+Si usa in 3 modi:
+- Prima che l' OS e' bootato e possiamo modificare il BIOS.
+- Quando l'host si e' completamente spento
+- Accedere all' host dopo un system failure
+
+Si puo' gestire tramite LAN.
+
+To function, IPMI requires the following components:
+
+- Baseboard Management Controller (BMC) - A micro-controller and essential component of an IPMI
+- Intelligent Chassis Management Bus (ICMB) - An interface that permits communication from one chassis to another
+- Intelligent Platform Management Bus (IPMB) - extends the BMC
+- IPMI Memory - stores things such as the system event log, repository store data, and more
+- Communications Interfaces - local system interfaces, serial and LAN interfaces, ICMB and PCI Management Bus
+
+## Footprinting the service
+IPMI comunica su porta **UDP 623**. I sistemi che usano IPMI sono chiamati
+BMC (Baseboard Management Controller). SPesso sono dispositivi Embedded ARM con linux.
+
+BMC sono embeddati in molte MOBO ma possono essere aggiunti con una PCI card.
+
+`j4k1dibe@htb[/htb]$ sudo nmap -sU --script ipmi-version -p 623 ilo.inlanfreight.local` con nmap.
+
+`msf6 > use auxiliary/scanner/ipmi/ipmi_version`, version scan con metasploit.
+
+## Default passwords
+|Product|	Username|	Password|
+|-------|---------|---------|
+Dell iDRAC|	root|	calvin
+HP iLO|	Administrator|	randomized 8-character string consisting of numbers and uppercase letters
+Supermicro IPMI	|ADMIN|	ADMIN
+
+## Dangerous Settings
+prima dell' autenticazione, il server manda al client un hash (SHA1 o MD5) al client. AHAHAHHA ma perche' lol.
+DOpo aver preso le hash si possono provare a craccare con hashcat.
+
+`hashcat -m 7300 ipmi.txt -a 3 ?1?1?1?1?1?1?1?1 -1 ?d?u` which tries all combinations of upper case letters and numbers for an eight-character password.
+
+Spesso abbiamo acccesso alla web console per gestire IPMI.
+
+
+
+## Dumpare hash con metasploit
+`msf6 > use auxiliary/scanner/ipmi/ipmi_dumphashes `
