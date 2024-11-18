@@ -878,3 +878,106 @@ Spesso abbiamo acccesso alla web console per gestire IPMI.
 
 ## Dumpare hash con metasploit
 `msf6 > use auxiliary/scanner/ipmi/ipmi_dumphashes `
+
+
+# Linux Remote Management Protocols
+
+## SSH
+il piu' usato e' **OpenSSH** e gira in porta 22.
+**SSH-1**, e' il protocollo piu' vecchio, non ha crittografia, vulnerabile a MiTM.
+**SSH-2**, versione piu' avanzata, non vulnerabile a MiTM.
+
+### Autenticazioni SSH
+SSH permette l' autenticazione in vari metodi:
+- Username, Password authentication
+- Public-key authentication
+- Host-based authentication
+- keyboard authentication
+- Challenge-response authentication
+- GSSAPI authentication
+
+### Public-key auth
+Il server manda il suo certficato cosi' che il client possa verificare autenticita'.
+Il client avra' una chiave SSH  pubblica e privata(possibilmente cifrata con una password). Il server avra' una copia della chiave pubblica.
+Quando il client si connette dovra' autenticarsi tramite la chiave privata
+
+### Default configuration
+version 7.2p1 of OpenSSH in 2016 aveva una command injection.
+
+
+### Dangerous settings
+Dangerous Settings
+Despite the SSH protocol being one of the most secure protocols available today, some misconfigurations can still make the SSH server vulnerable to easy-to-execute attacks. Let us take a look at the following settings:
+
+|Setting|	Description|
+|-------|------------|
+PasswordAuthentication yes|	Allows password-based authentication.
+PermitEmptyPasswords yes|	Allows the use of empty passwords.
+PermitRootLogin yes|	Allows to log in as the root user.
+Protocol 1|	Uses an outdated version of encryption.
+X11Forwarding yes|	Allows X11 forwarding for GUI applications.
+AllowTcpForwarding yes|	Allows forwarding of TCP ports.
+PermitTunnel|	Allows tunneling.
+DebianBanner yes|	Displays a specific banner when logging in.
+
+### Footprinting SSH
+`j4k1dibe@htb[/htb]$ ./ssh-audit.py 10.129.14.132`, ssh-audit ci permette di vedere molte info sul serve ssh.
+
+### Change authentication method
+Un server SSH tipicamente supporta piu' metodi di autenticazione.
+`j4k1dibe@htb[/htb]$ ssh -v cry0l1t3@10.129.14.132` cosi' possiamo vedere le autenticazioni che supporta
+
+`j4k1dibe@htb[/htb]$ ssh -v cry0l1t3@10.129.14.132 -o PreferredAuthentications=password` cosi' possiamo specificare l' autenticazione che vogliamo usare.
+
+## Rsync
+e' un tool per copiare file in remoto e localmente. quando esiste gia' una copia manda solo le differenze, senza mandare il file completo.
+
+By default, it uses port 873 and can be configured to use SSH for secure file transfers by piggybacking on top of an established SSH server connection.
+
+`j4k1dibe@htb[/htb]$ sudo nmap -sV -p 873 127.0.0.1`., nmap scan per Rsync
+
+```
+j4k1dibe@htb[/htb]$ nc -nv 127.0.0.1 873
+
+(UNKNOWN) [127.0.0.1] 873 (rsync) open
+@RSYNCD: 31.0
+@RSYNCD: 31.0
+#list
+dev            	Dev Tools
+@RSYNCD: EXIT
+```
+vedere una share aperta.
+
+`j4k1dibe@htb[/htb]$ rsync -av --list-only rsync://127.0.0.1/dev`, enumerare una share aperta.
+
+From the above output, we can see a few interesting files that may be worth pulling down to investigate further. We can also see that a directory likely containing SSH keys is accessible. From here, we could sync all files to our attack host with the command rsync -av rsync://127.0.0.1/dev. If Rsync is configured to use SSH to transfer files, we could modify our commands to include the -e ssh flag, or -e "ssh -p2222" if a non-standard port is in use for SSH. This guide is helpful for understanding the syntax for using Rsync over SSH.
+
+## R-services
+
+e' una suite di tool per fare azioni ma da remoto, tuttavia sono stati rimpiazzati da SSH.
+
+problema: trasmettono roba non criptata.
+usano porta **512, 513, and 514**
+gli R-commands sono:
+- rcp (remote copy), porta 514
+- rexec (remote execution), porta 512
+- rlogin (remote login), porta 513
+- rsh (remote shell), porta 514
+- rstat
+- ruptime
+- rwho (remote who)
+- rusers (insieme a who)
+
+il file `/etc/hosts.equiv`, contiene una lista dei trusted host che possono eseguire gli R-commands
+
+`j4k1dibe@htb[/htb]$ sudo nmap -sV -p 512,513,514 10.0.17.2`, scan con nmap.
+Output di nmap: PORT    STATE SERVICE    VERSION
+512/tcp open  exec?
+513/tcp open  login?
+514/tcp open  tcpwrapped
+
+
+The hosts.equiv and .rhosts files contain a list of hosts (IPs or Hostnames) and users that are trusted by the local host when a connection attempt is made using r-commands.
+
+`j4k1dibe@htb[/htb]$ rlogin 10.0.17.2 -l htb-student`. loggare usando rlogin.
+
