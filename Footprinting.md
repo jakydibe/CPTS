@@ -1020,6 +1020,7 @@ j4k1dibe@htb[/htb]$ ./rdp-sec-check.pl 10.129.201.248
 L' autenticazione a questi RDP server possiamo farla con vari tool linux quali: **xfreerdp, rdesktop, Renmina**.
 
 `j4k1dibe@htb[/htb]$ xfreerdp /u:cry0l1t3 /p:"P455w0rd!" /v:10.129.201.248`. connettersi con xfreerdp.
+`sudo xfreerdp /v:10.129.35.221 /u:alex /p:'lol123!mD' /cert:ignore /d:WINMEDIUM /dynamic-resolution`.
 
 ## WinRM
 
