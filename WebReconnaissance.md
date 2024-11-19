@@ -153,4 +153,7 @@ puo' fare:
 - WHOIS Lookups
 
 `dnsenum --enum inlanefreight.com -f /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -r`, subdomain brutefore con dnsenum.
+la flag **-r** significa recursively, quindi se trova un sottodominio brute-forza pre quello.
+
+
 
