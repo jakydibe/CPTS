@@ -67,3 +67,22 @@ DNS is not merely a technical protocol for translating domain names; it's a crit
 Uncovering Assets: DNS records can reveal a wealth of information, including subdomains, mail servers, and name server records. For instance, a CNAME record pointing to an outdated server (dev.example.com CNAME oldserver.example.net) could lead to a vulnerable system.
 Mapping the Network Infrastructure: You can create a comprehensive map of the target's network infrastructure by analysing DNS data. For example, identifying the name servers (NS records) for a domain can reveal the hosting provider used, while an A record for loadbalancer.example.com can pinpoint a load balancer. This helps you understand how different systems are connected, identify traffic flow, and pinpoint potential choke points or weaknesses that could be exploited during a penetration test.
 Monitoring for Changes: Continuously monitoring DNS records can reveal changes in the target's infrastructure over time. For example, the sudden appearance of a new subdomain (vpn.example.com) might indicate a new entry point into the network, while a TXT record containing a value like _1password=... strongly suggests the organization is using 1Password, which could be leveraged for social engineering attacks or targeted phishing campaigns.
+
+
+# Digging DNS
+
+## Comandi per queryare DNS
+| Tool                     | Key Features                                                                 | Use Cases                                                                                                   |
+|---------------------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `dig`                    | Versatile DNS lookup tool that supports various query types (A, MX, NS, TXT, etc.) and detailed output. | Manual DNS queries, zone transfers (if allowed), troubleshooting DNS issues, and in-depth analysis of DNS records. |
+| `nslookup`               | Simpler DNS lookup tool, primarily for A, AAAA, and MX records.             | Basic DNS queries, quick checks of domain resolution and mail server records.                              |
+| `host`                   | Streamlined DNS lookup tool with concise output.                           | Quick checks of A, AAAA, and MX records.                                                                   |
+| `dnsenum`                | Automated DNS enumeration tool, dictionary attacks, brute-forcing, zone transfers (if allowed). | Discovering subdomains and gathering DNS information efficiently.                                          |
+| `fierce`                 | DNS reconnaissance and subdomain enumeration tool with recursive search and wildcard detection. | User-friendly interface for DNS reconnaissance, identifying subdomains and potential targets.              |
+| `dnsrecon`               | Combines multiple DNS reconnaissance techniques and supports various output formats. | Comprehensive DNS enumeration, identifying subdomains, and gathering DNS records for further analysis.     |
+| `theHarvester`           | OSINT tool that gathers information from various sources, including DNS records (email addresses). | Collecting email addresses, employee information, and other data associated with a domain from multiple sources. |
+| Online DNS Lookup Services | User-friendly interfaces for performing DNS lookups.                       | Quick and easy DNS lookups, convenient when command-line tools are not available, checking for domain availability or basic information. |
+
+
+
+Per avere un output piccolo: `dig +short hackthebox.com`
