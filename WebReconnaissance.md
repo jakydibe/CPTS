@@ -102,3 +102,55 @@ Monitoring for Changes: Continuously monitoring DNS records can reveal changes i
 
 
 Per avere un output piccolo: `dig +short hackthebox.com`
+
+
+# Subdomains
+
+Spesso e' molto utile enumerare i sottodomini per varie ragioni quali:
+- Development and Staging Environments. spesso per testare nuove feature le aziende usano sottodomini prima di lanciarlo nella main app.
+- Hidden Login Portals
+- Legacy application. Applicazioni vecchie che si sono scordati li'
+- Sensitive information
+
+## Subdomain Enumeration
+### Active Subdomain Enumeration
+1) Se riusciamo e' fare un **DNS zone Transfer** che ci rivela una lista completa di subdomain(raramente si puo' fare).
+2) **brute-force** enumeration con tool come dnsenum,ffuf e gobuster.
+
+### Passive Subdomain Enumeration
+Ci si affida a fontin esterne di info. ad esempio **Certificate Transparecy (CT) Logs**, repository pubbliche di certificati SSL/TLS.
+
+Search engine come Google, usando ad esempio Google dork come **site:)  per mostrare solo sottodomini relativi al target domain.
+
+# Subdomain Bruteforcing
+
+Il processo si puo' dividere in 4 step:
+1) **Wordlist Selection**:
+     - **General Purpose**, una lista che contiene molti subdomain name, utile quando non conosci le naming convention del target
+     - **Targeted**, quando conosci le naming convention, piu' efficiente
+     - **Custom**, basata su specifiche keyword, patther etc/ etc
+2) **Iteration and Querying**, bruteforcing
+3) **DNS Lokkup**, Si fa una Query DNS per ogni potenziale sottominio per vedere se risolve. solitamente guardiamo i record A e AAAA.
+4) **Filtering and Validation**
+
+| Tool         | Description                                                                                                           |
+|--------------|-----------------------------------------------------------------------------------------------------------------------|
+| `dnsenum`    | Comprehensive DNS enumeration tool that supports dictionary and brute-force attacks for discovering subdomains.       |
+| `fierce`     | User-friendly tool for recursive subdomain discovery, featuring wildcard detection and an easy-to-use interface.       |
+| `dnsrecon`   | Versatile tool that combines multiple DNS reconnaissance techniques and offers customizable output formats.            |
+| `amass`      | Actively maintained tool focused on subdomain discovery, known for its integration with other tools and extensive data sources. |
+| `assetfinder`| Simple yet effective tool for finding subdomains using various techniques, ideal for quick and lightweight scans.      |
+| `puredns`    | Powerful and flexible DNS brute-forcing tool, capable of resolving and filtering results effectively.                  |
+
+
+## DNSEnum
+tool utile e scritto in perl.
+puo' fare:
+- DNS Record Enumeration
+- Zone Transfer Attempts
+- Subdomain Brute-forcing
+- Google Scraping
+- WHOIS Lookups
+
+`dnsenum --enum inlanefreight.com -f /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -r`, subdomain brutefore con dnsenum.
+
