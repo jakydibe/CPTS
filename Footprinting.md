@@ -981,3 +981,79 @@ The hosts.equiv and .rhosts files contain a list of hosts (IPs or Hostnames) and
 
 `j4k1dibe@htb[/htb]$ rlogin 10.0.17.2 -l htb-student`. loggare usando rlogin.
 
+
+# Windows Remote Management Protocols
+
+Di solito il remote management e' abilitato di default da Windows server 2016
+
+le 3 principali componenti per la gestione remota di Windows sono:
+- Remote Desktop Protocol (RDP)
+- Windows Remote Management (WinRM)
+- Windows Management Instrumentation (WMI)
+
+## RDP
+RDP e' stato sviluppato dalla microsoft per controllare in remoto una macchina windows con una GUI, con una comunicazione criptata over IP.
+
+Solitamente usa porta **3389** TCP, puo' anche usare la stessa ma UDP.
+
+Per funzionare sia il firewall nella rete che nel server devono permettere connessioni da fuori. se c'e' il NAT tra client e server (molto spesso), dovremo fare port forwarding.
+
+RDO usa TLS/SSL da Windows Vista. Comunque molte volte  se proviamo si accetta lo stesso una connessione con crittografia non adeguata.
+
+RDP e' installato di default su server Windows. si puo' attivare usando il Server Manager e ha come default setting di accettare connesioni al servizio solo per Host con **Network Level Authentication(NLA)**.
+
+### Footprinting the Service
+possiamo capire spesso se NLA e' attivato o no.
+
+`j4k1dibe@htb[/htb]$ nmap -sV -sC 10.129.201.248 -p3389 --script rdp*`, scan con gli script Nmap.
+
+gli **RDP cookies (mstshash=nmap)** possono essere usati da vari threat hunters come gli EDR per verificare se c'e' un attacco in corso e potrebbero bloccarci.
+`j4k1dibe@htb[/htb]$ nmap -sV -sC 10.129.201.248 -p3389 --packet-trace --disable-arp-ping -n`
+
+C'e' uno script in perl che ci permette di verificare settings di RDP basandosi sugli handshake
+
+```
+j4k1dibe@htb[/htb]$ git clone https://github.com/CiscoCXSecurity/rdp-sec-check.git && cd rdp-sec-check
+j4k1dibe@htb[/htb]$ ./rdp-sec-check.pl 10.129.201.248
+```
+
+L' autenticazione a questi RDP server possiamo farla con vari tool linux quali: **xfreerdp, rdesktop, Renmina**.
+
+`j4k1dibe@htb[/htb]$ xfreerdp /u:cry0l1t3 /p:"P455w0rd!" /v:10.129.201.248`. connettersi con xfreerdp.
+
+## WinRM
+
+Windows Remote Management e' un semplice protocollo integrato in Windows basato sulla command line.
+
+WinRM usa il **Simple Object Access Protocol (SOAP)** per stabilire la connessione agli host remoti e le loro applicazioni.
+
+Percio' WinRM deve essere esplicitamente abilitato e configurato da Windows 10 in avanti.
+
+WinRM usa le porte **TCP 5985 e 5986** per la comunicazione. con 5986 che usa HTTPS, prima si usavano porta 80 e 443.
+
+Un altro componente e' la Windows Remote Shell (WinRS), che ci permette di eseguire comandi sul sistema remoto. Il programma e' incluso anche su windows 7 di default.
+Con WinRM e' possibile eseguire un comando remoto su un altro server.
+
+### Footprinting the service
+
+Sappiamo che le porte usate sono 5985 HTTP, e 5986 HTTPS
+
+`j4k1dibe@htb[/htb]$ nmap -sV -sC 10.129.201.248 -p5985,5986 --disable-arp-ping -n` con nmap.
+
+Per vedere se possiamo raggiungere server remoti con WinRM possiamo usare powershell con il cmdLet Test-WsMan.
+oppure su linux c'e' **evil-winrm**
+
+`j4k1dibe@htb[/htb]$ evil-winrm -i 10.129.201.248 -u Cry0l1t3 -p P455w0rD!`, evil-winrm.
+
+## WMI
+Windows Management Instrumentation (WMI) is Microsoft's implementation and also an extension of the Common Information Model (CIM), core functionality of the standardized Web-Based Enterprise Management (WBEM) for the Windows platform. 
+
+a VMI si accede via Powershell, VBScript o la Windows Management Instrumentation Console (WMIC). 
+
+### Footprinting the service
+La comunicazione avviene su porta **135 TCP**, dopo averla stabilita la comunicazione si muove su una porta random
+
+
+`j4k1dibe@htb[/htb]$ /usr/share/doc/python3-impacket/examples/wmiexec.py Cry0l1t3:"P455w0rD!"@10.129.201.248 "hostname"` con wmiexec.py da Impacket (https://github.com/fortra/impacket/blob/master/examples/wmiexec.py).
+
+
