@@ -413,6 +413,8 @@ installiamo i requirements.txt.
 
 Flag per FinalRecon
 
+`j4k1dibe@htb[/htb]$ ./finalrecon.py --headers --whois --url http://inlanefreight.com`, run di esempio
+
 | Option         | Argument         | Description                                      |
 |----------------|------------------|--------------------------------------------------|
 | `-h`, `--help` |                  | Show the help message and exit.                 |
