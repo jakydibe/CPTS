@@ -355,7 +355,7 @@ j4k1dibe@htb[/htb]$ wget -O ReconSpider.zip https://academy.hackthebox.com/stora
 j4k1dibe@htb[/htb]$ unzip ReconSpider.zip 
 ```
 
-`j4k1dibe@htb[/htb]$ python3 ReconSpider.py http://inlanefreight.com`
+`j4k1dibe@htb[/htb]$ python3 ReconSpider.py http://inlanefreight.com`. I risultati stanno in **results.json**
 
 # Search Engine Discovery
 usa questo **https://www.exploit-db.com/google-hacking-database**
