@@ -155,5 +155,29 @@ puo' fare:
 `dnsenum --enum inlanefreight.com -f /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -r`, subdomain brutefore con dnsenum.
 la flag **-r** significa recursively, quindi se trova un sottodominio brute-forza pre quello.
 
+# DNS Zone transfer
+Questo meccanismo e' sviluppato per replicare DNS record tra server Name servers. Se configurato male (raro) puo' essere molto utile.
+Nei primi anni di internet era comune permettere una Zone Transfer a tutti i client. 
+
+Uno zone transfer e' effettivamente una copia di tutti i record DNS di una zona da un server ad un altro.
+E' fondamentale questo processo per mantenere ridondanza tra server, ma se configurato male possiamo scaricare l' intero file di Zona vedendo tutti i sottodomini e gli IP associati e altri dati.
+
+La richiesta si fa:
+1) Server secondario fa una richiesta AXFR (richiesta di Zone Transfer)
+2) Il primary server risponde con il SOA record (Start Of Authority) e i Vari DNS Record
+3) Poi il primary server risponde con un Zone Transfer Complete
+4) Infine il secondary server risponde con un ACK.
+
+## Zone Transfer Vulnerability e Remediation
+L' awereness di questa vulnerabilita' e' cresciuta e per mitigare il problema i server DNS moderni sono tipicamente configurati per permettere zone transfers solo a server secondari trustati.
+
+Comunque rimane una cosa da provare fare lo zone transfer perche' legacy systems e configurazioni sbagliate possono consentircelo.
+
+## Exploiting Zone Transfers
+`j4k1dibe@htb[/htb]$ dig axfr @nsztm1.digi.ninja zonetransfer.me` Qua chiediamo uno Zone transfer al server DNS responsabile per il dominio **zonetransfer.me**.
+
+
+
+
 
 
