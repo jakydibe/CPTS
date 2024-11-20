@@ -178,6 +178,58 @@ Comunque rimane una cosa da provare fare lo zone transfer perche' legacy systems
 
 
 
+# Virtual Hosts
+Web server come Apache, Nginx, o IIS sono fatti per hostare piu' server web o applicazioni su uno stesso server. QUesto e' possibile grazie al **Virtual hoskint**. che permette di differenziare tra domini, sottodomini e website separati.
+
+## Come funzionano 
+Il core del virtual hosting e' l' abilita' dei server web di distinguere tra piu' website che condividono lo steso indirizzo IP. Si fa usando l' header **HTTP Host**, un campo dell' header.
+
+La differenza chiav tra Vhosts e sottodomini e' la relazione con il DNS e la conf. del server web.
+
+- Subdomains: These are extensions of a main domain name (e.g., blog.example.com is a subdomain of example.com). Subdomains typically have their own DNS records, pointing to either the same IP address as the main domain or a different one. They can be used to organise different sections or services of a website.
+- Virtual Hosts (VHosts): Virtual hosts are configurations within a web server that allow multiple websites or applications to be hosted on a single server. They can be associated with top-level domains (e.g., example.com) or subdomains (e.g., dev.example.com). Each virtual host can have its own separate configuration, enabling precise control over how requests are handled.
+
+se un virtual host non ha un record DNS possiamom comunque accederci modificando il file hosts.
+
+Spesso i sitiweb hanno subdomains che non sono pubblici e non appaiono in DNR Records. sono accessibili sono internamente.
+
+**Vhost fuzzing** e' la tecnica per scoprire subdomain e Vhosts pubblici e non pubblici testando vari hostname contro indirizzo ip conosciuto.
+
+```
+# Example of name-based virtual host configuration in Apache
+<VirtualHost *:80>
+    ServerName www.example1.com
+    DocumentRoot /var/www/example1
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.example2.org
+    DocumentRoot /var/www/example2
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName www.another-example.net
+    DocumentRoot /var/www/another-example
+</VirtualHost>
+```
+
+## Tipi di virtual hosting
+
+1) Name-Based Virtual Hosting. questo metodo dipende solo sull' header HTTP Host. e' il piu' comune e flessibile e non richiede piu' indirizzi IP. Puo' avere alcune limitazioni con protocolli come SSL/TLS.
+2) IP-Based Virtual Hosting. Questo tipo assegna un IP unico ad ogni sito web hostato sul server. Il server determina quale sito web rispondere in base a quale IP e' stato richiesto. Non dipende dall' header HTTP Host. Contro: richiede molti Indirizzi IP.
+3) Port-Based Virtual Hosting. Siti web diversi sono associati a porte diverse sullo stesso IP. Utile ma non e' molto user friendly perche' richiede agli utenti di specificare la porta nell' URL.
+
+## Virtual Host Discovery Tools
+
+| Tool          | Description                                                                                     | Features                                                     |
+|---------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
+| `gobuster`    | A multi-purpose tool often used for directory/file brute-forcing, but also effective for virtual host discovery. | Fast, supports multiple HTTP methods, can use custom wordlists. |
+| `Feroxbuster` | Similar to Gobuster, but with a Rust-based implementation, known for its speed and flexibility.  | Supports recursion, wildcard discovery, and various filters.  |
+| `ffuf`        | Another fast web fuzzer that can be used for virtual host discovery by fuzzing the Host header.  | Customizable wordlist input and filtering options.            |
 
 
+### Gobuster
+`j4k1dibe@htb[/htb]$ gobuster vhost -u http://<target_IP_address> -w <wordlist_file> --append-domain` --append-domain significa di appendere il dominio base ad ogni parola nella wordlist.
+
+flag **-k** per ignorare errori di certificati SSL/TLS. flag **-o** per salvare output in un file.
 
