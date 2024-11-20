@@ -254,3 +254,11 @@ La transparency serve per:
 I CT logs offrono un vantaggio unico nell' enumerazione dei sottodomini rispetto ad altri metodi come brute-forcing etc.etc.
 CT logs danno un record di certificati emessi per un dominio e sottodomini. Questo significa che non sei limitato dalla wordlist.
 Inoltre i CT logs possono rivelare sottodomini con certificati scaduti, che magari hostano software legacy
+
+## Searching CT Logs
+
+| Tool     | Key Features                                                                                 | Use Cases                                         | Pros                                  | Cons                                       |
+|----------|---------------------------------------------------------------------------------------------|-------------------------------------------------|---------------------------------------|--------------------------------------------|
+| `crt.sh` | User-friendly web interface, simple search by domain, displays certificate details, SAN entries. | Quick and easy searches, identifying subdomains, checking certificate issuance history. | Free, easy to use, no registration required. | Limited filtering and analysis options.    |
+| `Censys` | Powerful search engine for internet-connected devices, advanced filtering by domain, IP, certificate attributes. | Advanced device and certificate reconnaissance. | Advanced filtering, rich data sources.  | Requires an account for extended features. |
+
