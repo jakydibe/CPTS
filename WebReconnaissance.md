@@ -237,3 +237,20 @@ Spesso i sitiweb hanno subdomains che non sono pubblici e non appaiono in DNR Re
 
 flag **-k** per ignorare errori di certificati SSL/TLS. flag **-o** per salvare output in un file.
 
+
+# Certificate Transparency Logs
+Al centro di SSL/TLS ci sono i certificati digitali, piccoli file che verificano l' identita' dei website per assicurare connessioni sicure.
+
+Gli attaccanti possono abusare di rogue o misused certificati per impersonarsi siti web legittimi e intercettare dati sensibili.
+
+I **Certicate Transparecy(CT) logs** sono log pubblici che accertano l' emissione del certificato. quando una CA(Certificate Authority) emette un ceritifcato nuovo deve submittare alcuni CT logs.
+
+La transparency serve per:
+- Rilevare subito dei certificati maligni (Rogue cert).
+- Accountability for Certificate Authorities. Se una CA emette un certificato che viola le regole o standard, sara' visibile nei log.
+- RInforzare la Web PKI.
+
+## CT Logs and Web Recon
+I CT logs offrono un vantaggio unico nell' enumerazione dei sottodomini rispetto ad altri metodi come brute-forcing etc.etc.
+CT logs danno un record di certificati emessi per un dominio e sottodomini. Questo significa che non sei limitato dalla wordlist.
+Inoltre i CT logs possono rivelare sottodomini con certificati scaduti, che magari hostano software legacy
