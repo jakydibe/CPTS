@@ -264,5 +264,95 @@ Inoltre i CT logs possono rivelare sottodomini con certificati scaduti, che maga
 
 `j4k1dibe@htb[/htb]$ curl -s "https://crt.sh/?q=facebook.com&output=json" | jq -r '.[]
  | select(.name_value | contains("dev")) | .name_value' | sort -u`, per listare tutti i sottodomini di facebook.com che contengono 'dev'.
- 
 
+
+ # Fingerprinting
+
+ Il fingerprinting consiste nell' estrarre dettagli tecnici sulle tecnologie usate in un sito web.
+
+ Tecniche:
+ - Banner Grabbing. analizzare i banner per vedere software usati , versioni e altri dettagli.
+ - Analisi degli header HTTP. Il server header a volte rivela alcune info sul software del web server e **X-Powered-By** header puo' rivelare alcune info sulle tecnologie usate.
+ - Probing for Specific Responses. Mandare richieste craftate in un modo specifico per vedere che risposte da' e capire ce tecnologie vengono usate e le versioni.
+ - Analisi del contenuto della pagina web.
+
+
+| Tool         | Description                                                                  | Features                                                                                       |
+|--------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| `Wappalyzer` | Browser extension and online service for website technology profiling.      | Identifies a wide range of web technologies, including CMSs, frameworks, analytics tools, and more. |
+| `BuiltWith`  | Web technology profiler that provides detailed reports on a website's technology stack. | Offers both free and paid plans with varying levels of detail.                                |
+| `WhatWeb`    | Command-line tool for website fingerprinting.                               | Uses a vast database of signatures to identify various web technologies.                      |
+| `Nmap`       | Versatile network scanner that can be used for various reconnaissance tasks, including service and OS fingerprinting. | Can be used with scripts (NSE) to perform more specialised fingerprinting.                   |
+| `Netcraft`   | Offers a range of web security services, including website fingerprinting and security reporting. | Provides detailed reports on a website's technology, hosting provider, and security posture. |
+| `wafw00f`    | Command-line tool specifically designed for identifying Web Application Firewalls (WAFs). | Helps determine if a WAF is present and, if so, its type and configuration.                   |
+
+
+## Banner Grapping
+`j4k1dibe@htb[/htb]$ curl -I inlanefreight.com`, con curl, la flag **-I o --head** serve a prendere solo gli heade HTTP.
+
+## Wafw00f
+**Web Application Firewalls** (WAFs) sono soluzioni di sicurezza per proteggere app web. Prima di fare fingerprinting e' importante capire se il sito usa un WAF.
+
+**wafw00f** e' un tool che permette di capire se un app usa un WAF.
+`j4k1dibe@htb[/htb]$ pip3 install git+https://github.com/EnableSecurity/wafw00f`, per installare 
+
+`j4k1dibe@htb[/htb]$ wafw00f inlanefreight.com`, per usare.
+
+## Nikto
+Nikto e' un web server scanner open source.
+`j4k1dibe@htb[/htb]$ nikto -h inlanefreight.com -Tuning b`, dove **-h** specifica l' Host, **-Tuning b** specifica di runnare solo i Software Identification modules.
+
+# Crawling
+Il crawling chiamato anche spidering e' il processo automatico di explorare il World Wide Web.
+
+Un crawler segue link da una pagina ad un altra, raccoglie informazioni. 
+UN crawler Inizia da un Seed URL, fetcha la pagina, estrae tutti i link, li aggiunge ad una coda e e li esplora facendo questo processo ricorsivamente.
+Facendo cosi' puo' mappare una vasta porzione di una pagina web.
+
+Di solito estraggono Link (esterni e interni), Commenti, Metadati e File sensibili.
+
+# Robots.txt
+
+| Directive     | Description                                                                                                  | Example                                                    |
+|---------------|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
+| `Disallow`    | Specifies paths or patterns that the bot should not crawl.                                                   | `Disallow: /admin/` (disallow access to the admin directory) |
+| `Allow`       | Explicitly permits the bot to crawl specific paths or patterns, even if they fall under a broader Disallow rule. | `Allow: /public/` (allow access to the public directory)   |
+| `Crawl-delay` | Sets a delay (in seconds) between successive requests from the bot to avoid overloading the server.          | `Crawl-delay: 10` (10-second delay between requests)       |
+| `Sitemap`     | Provides the URL to an XML sitemap for more efficient crawling.                                              | `Sitemap: https://www.example.com/sitemap.xml`             |
+
+
+# Well-known URIs
+lo standard **.well-known**, e; uno standard di directory in un website root domain.
+Tipicamente si accede tramite il path /.well-known/  e include metadati e file di configurazione.
+
+.well-known semplifica la discovery e accesso per vari stakeholder.
+
+la Internet Assigned Numbers Authority(YANA) mantiene un registro di .well-known URIs.
+
+Eccone alcuni:
+| URI Suffix                        | Description                                                                                     | Status       | Reference                                                                                             |
+|-----------------------------------|-------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------------------------------|
+| `security.txt`                    | Contains contact information for security researchers to report vulnerabilities.              | Permanent    | [RFC 9116](https://datatracker.ietf.org/doc/rfc9116/)                                                |
+| `/.well-known/change-password`    | Provides a standard URL for directing users to a password change page.                        | Provisional  | [W3C Change Password URL](https://w3c.github.io/webappsec-change-password-url/#the-change-password-well-known-uri) |
+| `openid-configuration`            | Defines configuration details for OpenID Connect, an identity layer on top of the OAuth 2.0 protocol. | Permanent    | [OpenID Connect Discovery](http://openid.net/specs/openid-connect-discovery-1_0.html)                |
+| `assetlinks.json`                 | Used for verifying ownership of digital assets (e.g., apps) associated with a domain.          | Permanent    | [Google Digital Asset Links](https://github.com/google/digitalassetlinks/blob/master/well-known/specification.md) |
+| `mta-sts.txt`                     | Specifies the policy for SMTP MTA Strict Transport Security (MTA-STS) to enhance email security. | Permanent    | [MTA-STS Specification](https://tools.ietf.org/html/rfc8461)                                         |
+ 
+Nel contesto di web-recon l' URI **openid-configuration** puo' essere molto utile.
+roba noiosissima. riguardatela qui: https://academy.hackthebox.com/module/144/section/3078
+
+
+# Creepy Crawlies
+## Popular Web Crawlers
+- Burp Suite SPider
+- OWASP ZAP
+- Scrapy (python framework)
+- Apache Nutch
+
+## ReconSPider
+```
+j4k1dibe@htb[/htb]$ wget -O ReconSpider.zip https://academy.hackthebox.com/storage/modules/144/ReconSpider.v1.2.zip
+j4k1dibe@htb[/htb]$ unzip ReconSpider.zip 
+```
+
+`j4k1dibe@htb[/htb]$ python3 ReconSpider.py http://inlanefreight.com`
