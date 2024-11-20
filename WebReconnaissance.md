@@ -231,5 +231,7 @@ Spesso i sitiweb hanno subdomains che non sono pubblici e non appaiono in DNR Re
 ### Gobuster
 `j4k1dibe@htb[/htb]$ gobuster vhost -u http://<target_IP_address> -w <wordlist_file> --append-domain` --append-domain significa di appendere il dominio base ad ogni parola nella wordlist.
 
+`j4k1dibe@htb[/htb]$ gobuster vhost -u http://inlanefreight.htb:81 -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt --append-domain` esmepio pratico.
+
 flag **-k** per ignorare errori di certificati SSL/TLS. flag **-o** per salvare output in un file.
 
