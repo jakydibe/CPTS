@@ -375,3 +375,28 @@ Si puo' anche usare il built-in command per copiare i file in backup mode.
 Robocopy differs from the copy command in that instead of just copying all files, it can check the destination directory and remove files no longer in the source directory. It can also compare files before copying to save time by not copying files that have not been changed since the last copy/backup job ran.
 
 `C:\htb> robocopy /B E:\Windows\NTDS .\ntds ntds.dit`
+
+# Event Log Readers
+
+Alcuni admin potrebbero abilitare il logging dei comandi in shell per verificare l'esecuzione di comandi loschi tipo che il PC di un tizio della sezione marketing runna `tasklist`.
+
+
+`C:\htb> net localgroup "Event Log Readers"` :vedere se e' presente il gruppo di Event Log reader
+
+Possiamo fare query ai windows events con **wevutil**.
+
+`PS C:\htb> wevtutil qe Security /rd:true /f:text | Select-String "/user"`
+We can also specify alternate credentials for wevtutil using the parameters /u and /p.
+
+`C:\htb> wevtutil qe Security /rd:true /f:text /r:share01 /u:julie.clay /p:Welcome1 | findstr "/user"`
+
+Comunque per usare Get-WInEvent non basta essere nel gruppo EventLogReaders ma bisogna pure modificare questo registro: HKLM\System\CurrentControlSet\Services\Eventlog\Security.
+
+### Searching security logs using Get-WinEvent
+N.B. 4688 e' l'event ID che un processo e' stato creato.
+
+`PS C:\htb> Get-WinEvent -LogName security | where { $_.ID -eq 4688 -and $_.Properties[8].Value -like '*/user*'} | Select-Object @{name='CommandLine';expression={ $_.Properties[8].Value }}`
+
+The cmdlet can also be run as another user with the -Credential parameter.
+
+
