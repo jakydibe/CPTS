@@ -145,3 +145,82 @@ accesschk.exe /accepteula \pipe\.
 Usando **accesschk** possiamo cercare tutte le named piped che ci danno permessi di scrittura
 
 `accesschk.exe -w \pipe\* -v` comando per vedere le pipes con permessi di scrittura
+
+
+# Windows Privilege Overview
+
+## Windows Authorization Process
+**Security Principals** sono qualsiasi cosa che puo' essere autenticata dal sistema operativo Windows.(computer, utenti, processi etc.etc.).
+
+Ogni singolo Security Principal e' identificat da un unico **Security Identifier (SID)**, e appena creato un security principal gli viene assegnato il SID e gli rimane a vita.
+
+Quando un utente prova ad accedere ad un oggetto (directory/file etc.etc.) tutte le info dell' utente come il suo SID, il SID dei gruppi di cui fa parte etc.etc. viene comparato con ogni entry della **Access Control Entries (ACEs)** finche' si trova un match e dopo si fa una decisione.
+
+
+## Right and Privileges in Windows
+
+| Group                        | Description                                                                                                                                                                                                                                                                                                  |
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Default Administrators       | Domain Admins and Enterprise Admins are "super" groups.                                                                                                                                                                                                                                                     |
+| Server Operators             | Members can modify services, access SMB shares, and backup files.                                                                                                                                                                                                                                           |
+| Backup Operators             | Members are allowed to log onto DCs locally and should be considered Domain Admins. They can make shadow copies of the SAM/NTDS database, read the registry remotely, and access the file system on the DC via SMB. This group is sometimes added to the local Backup Operators group on non-DCs.              |
+| Print Operators              | Members can log on to DCs locally and "trick" Windows into loading a malicious driver.                                                                                                                                                                                                                      |
+| Hyper-V Administrators       | If there are virtual DCs, any virtualization admins, such as members of Hyper-V Administrators, should be considered Domain Admins.                                                                                                                                                                         |
+| Account Operators            | Members can modify non-protected accounts and groups in the domain.                                                                                                                                                                                                                                         |
+| Remote Desktop Users         | Members are not given any useful permissions by default but are often granted additional rights such as Allow Login Through Remote Desktop Services and can move laterally using the RDP protocol.                                                                                                           |
+| Remote Management Users      | Members can log on to DCs with PSRemoting. This group is sometimes added to the local remote management group on non-DCs.                                                                                                                                                                                    |
+| Group Policy Creator Owners  | Members can create new GPOs but would need to be delegated additional permissions to link GPOs to a container such as a domain or OU.                                                                                                                                                                        |
+| Schema Admins                | Members can modify the Active Directory schema structure and backdoor any to-be-created Group/GPO by adding a compromised account to the default object ACL.                                                                                                                                                 |
+| DNS Admins                   | Members can load a DLL on a DC, but do not have the necessary permissions to restart the DNS server. They can load a malicious DLL and wait for a reboot as a persistence mechanism. Loading a DLL will often result in the service crashing. A more reliable way to exploit this group is to create a WPAD record. |
+
+## User rights assignment
+
+| Setting Constant              | Setting Name                               | Standard Assignment                 | Description                                                                                                                                                                                                                                    |
+|-------------------------------|--------------------------------------------|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SeNetworkLogonRight           | Access this computer from the network     | Administrators, Authenticated Users | Determines which users can connect to the device from the network. This is required by network protocols such as SMB, NetBIOS, CIFS, and COM+.                                                                                                |
+| SeRemoteInteractiveLogonRight | Allow log on through Remote Desktop Services | Administrators, Remote Desktop Users | Determines which users or groups can access the login screen of a remote device through a Remote Desktop Services connection. A user can establish a Remote Desktop Services connection but not log on to the console of the same server.         |
+| SeBackupPrivilege             | Back up files and directories             | Administrators                      | Determines which users can bypass file and directory, registry, and other persistent object permissions for the purposes of backing up the system.                                                                                             |
+| SeSecurityPrivilege           | Manage auditing and security log          | Administrators                      | Determines which users can specify object access audit options for individual resources such as files, Active Directory objects, and registry keys. These users can also view and clear the Security log in Event Viewer.                       |
+| SeTakeOwnershipPrivilege      | Take ownership of files or other objects  | Administrators                      | Determines which users can take ownership of any securable object in the device, including Active Directory objects, NTFS files and folders, printers, registry keys, services, processes, and threads.                                         |
+| SeDebugPrivilege              | Debug programs                            | Administrators                      | Determines which users can attach to or open any process, even a process they do not own. This user right provides access to sensitive and critical operating system components.                                                                |
+| SeImpersonatePrivilege        | Impersonate a client after authentication | Administrators, Local Service, Network Service, Service | Determines which programs are allowed to impersonate a user or another specified account and act on behalf of the user.                                                                                                                       |
+| SeLoadDriverPrivilege         | Load and unload device drivers            | Administrators                      | Determines which users can dynamically load and unload device drivers. This is not required if a signed driver already exists in the device's driver.cab file.                                                                                |
+| SeRestorePrivilege            | Restore files and directories             | Administrators                      | Determines which users can bypass file, directory, registry, and other persistent object permissions when restoring backed-up files and directories. It also allows users to set valid security principals as the owner of an object.           |
+
+
+Molti permessi sono visibili solo quando si runna una shell elevata. Questo concetto di elevazione dei privilegi e UAC si usa per limitare le azioni sensibli solo quando realmente necessarie.
+
+Quando un privilegio compare come **disabled** significa che questo utente ha questo privilegio pero' non possiamo usarlo negli access token finche' non e' enabled.
+
+Non esistono built-in commands per abilitare i privilegi disabled ma con un po' di scripting si puo' fare: https://www.powershellgallery.com/packages/PoshPrivilege/0.3.0.0/Content/Scripts%5CEnable-Privilege.ps1.
+
+### Standard user rights
+```
+Privilege Name                Description                    State
+============================= ============================== ========
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set Disabled
+```
+
+### Backup operators rights
+Questo gruppo ha anche altri privilegi che pero' UAC restringe.
+```
+Privilege Name                Description                    State
+============================= ============================== ========
+SeShutdownPrivilege           Shut down the system           Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set Disabled
+```
+### Detection
+This post(https://blog.palantir.com/windows-privilege-abuse-auditing-detection-and-defense-3078a403d74e) is worth a read for more information on Windows privileges as well as detecting and preventing abuse, specifically by logging event 4672: Special privileges assigned to new logon which will generate an event if certain sensitive privileges are assigned to a new logon session. This can be fine-tuned in many ways, such as by monitoring privileges that should never be assigned or those that should only ever be assigned to specific accounts.
+
+
+# SeImpersonate and SeAssignPrimaryToken
+Ogni processo in windows ha un token assegnato che contiene informazioni sull' utente che l'ha runnato.
+
+Se noi riusciamo a rubare un Token di SYSTEM e abbiamo il privilegio **SeImpersonate**(spesso posseduto da utenti di servizi) possiamo creare un processo con un token (con la Win32API CreateProcessWithTokenW).
+
+Alcuni programmi legittimi fanno cio' ovvero richiedono al processo SYSTEM **WinLogon** un token di SYSTEM e impersonano system per fare azioni privilegiate.
+
+Questi sono i cosiddetti **potato style** attacks.
+
