@@ -99,5 +99,49 @@ WMI si puo' usare anche per vedere i software installati
 `C:\htb> net accounts`
 
 
+# Communication With Processes
+Uno dei posti migliori per privesc e' guardare i processi che runnano nel sistema. Anche se non stanno runnando da amminstratore possono portare a privesc
+tipo se si exploita un servizio con SeImpersonateToken.
 
+## Access Tokens
+Gli access token sono usati per descrivere il security context (attributi di sicurezza di un process o thread).
+Il token include informazioni sull' identita' dell' utente e i privilegi specifici di quel processo o thread.
+Quando un utente si autentica la password viene verificata contro un database, e se si autentica gli viene assegnato un access token. Ogni volta che l'utente interagisce con un process una copia di quel token viene presentata ed associata al processo.
 
+## Enumerating Network Services
+
+Il metodo piu' comune per interagire con i processi e' tramite network socket (DNS,HTTP,SMB etc.etc.). **netstat** mostra le connessioni TCP e UDP attive.
+Potremmo trovare servizi vulnerabili.
+
+`C:\htb> netstat -ano`.
+
+La cosa principale da guardare sono le entry che ascoltano nei loopback addresses (**127.0.0.1** e **::\1**) che non stanno ascoltando sull' indirizzo IP della rete o sul broadcast(0.0.0.0, ::/0).
+Spesso queste cose sono insicure perche' non sono accessibili dalla rete.
+
+**Splunk Universal Forwarder** esempio di privesc.
+
+**Erlang Port (25672)** porta spesso usata come vettore di privesc. 
+
+## Named Pipes
+Un altro modo in cui i processi comunicano tra loro sono le **Named Pipes**. Essenzialmente sono file storati in memoria che vengono ripuliti dopo essere stati letti.
+
+Cobalt strike usa Named Piped per ogni comando. spesso pero' si usa la named pipe di un altro processo per mascherarsi.
+
+ci sono due tipi di Pipe: **Named** e **Anonymous piped**.
+
+Named pipes can communicate using half-duplex, or a one-way channel with the client only being able to write data to the server, or duplex, which is a two-way communication channel that allows the client to write data over the pipe, and the server to respond back with data over that pipe.
+
+`C:\htb> pipelist.exe /accepteula` per listare le istance di Named Pipes, Pipelist e' della sysinternal suite
+
+`PS C:\htb>  gci \\.\pipe\` con powershell.
+
+After obtaining a listing of named pipes, we can use Accesschk to enumerate the permissions assigned to a specific named pipe by reviewing the Discretionary Access List (DACL), which shows us who has the permissions to modify, write, read, or execute a resource. Let's take a look at the LSASS process. We can also review the DACLs of all named pipes using the command .\accesschk.exe /accepteula \pipe\.
+
+accesschk.exe /accepteula \pipe\.
+
+`C:\htb> accesschk.exe /accepteula \\.\Pipe\lsass -v`
+
+## Named Pipes Attack Example
+Usando **accesschk** possiamo cercare tutte le named piped che ci danno permessi di scrittura
+
+`accesschk.exe -w \pipe\* -v` comando per vedere le pipes con permessi di scrittura
