@@ -29,5 +29,69 @@ We should always look at routing tables to view information about the local netw
 `PS C:\htb> Get-AppLockerPolicy -Effective | select -ExpandProperty RuleCollections` list applocker rules
 `PS C:\htb> Get-AppLockerPolicy -Local | Test-AppLockerPolicy -path C:\Windows\System32\cmd.exe -User Everyone`
 
+# Initial Enumeration
+
+## Key points
+- **OS Name** and **Version** sono utili per capire cosa dobbiamo cercare e se ci sono exploit pubblici.
+- **Running Services**. E' importante vedere quali servizi runnano, soprattutto runnati da local administrator o NT AUTHORITY/SYSTEM.
+
+## System Information
+`C:\htb> tasklist /svc`, tasklist ritorna i processi in esecuzione.
+E' importante diventare familiari con i processi standard di windows come SMSS.exe, CSRSS.exe, winlogon.exe LSASS.exe e svchost.exe. e' importante perche'
+cosi' potremo spottare subito processi non standard e potenzialmente vulnerabili.
+
+## Display ALl Environment Variables
+il comando **set** per printarle.
+La variabile piu' comune da vedere e' **PATH**, e molto spesso gli amministratori la modificano.
+
+`C:\htb> set`, lista tutte le variabili d' ambiente.
+
+## Detailed Configuration Information
+il comando **systeminfo** mostra se la box e' stata patchata di recente. se non lo e' stata potremmo semplicemente runnare un known exploit.
+Google the KBs installed under HotFixes to get an idea of when the box has been patched. 
+The System Boot Time and OS Version can also be checked to get an idea of the patch level.
+
+`C:\htb> systeminfo`
+
+## Patches and Updates
+Se systeminfo non mostra gli hotfixes possiamo vederli con **WMI**
+
+`C:\htb> wmic qfe` mostra le laetst patch
+
+`PS C:\htb> Get-HotFix | ft -AutoSize` anche questo
+
+## Installed Programs
+WMI si puo' usare anche per vedere i software installati
+`C:\htb> wmic product get name`
+`PS C:\htb> Get-WmiObject -Class Win32_Product |  select Name, Version`, con powershell
+
+## Display Running Processes
+`PS C:\htb> netstat -ano`
+
+## User & Group information
+### Logged-In Users
+`C:\htb> query user`, per vedere gli utenti.
+### Current User
+`C:\htb> echo %USERNAME%`
+
+### Current User Privileges
+`C:\htb> whoami /priv`
+
+### Current User Group Information
+`C:\htb> whoami /groups`
+
+### Get All Users
+`C:\htb> net user`
+
+### Get All Groups
+`C:\htb> net localgroup`
+
+### Deatils about a specific group
+`C:\htb> net localgroup administrators`
+
+### Password Policy and Other account info
+`C:\htb> net accounts`
+
+
 
 
