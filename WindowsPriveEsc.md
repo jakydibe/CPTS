@@ -773,3 +773,27 @@ Possiamo usare WMIC per vedere quali programmi si eseguono all' avvio. Supponend
 
 `PS C:\htb> Get-CimInstance Win32_StartupCommand | select Name, command, Location, User |fl`
 
+
+# Kernel Exploits
+
+L' avere computer sempre aggiornati non e' facile per niente.
+
+questo sito aiuta a trovare CVE per Windows: **https://msrc.microsoft.com/update-guide/vulnerability**
+
+Vulnerabilita' da ricordarsi:
+- MS08-067
+- MS17-010
+- ALPC Task Scheduler 0-Day
+- CVE-2021-36934 HiveNightmare, aka SeriousSam
+- CVE-2021-1675/CVE-2021-34527 PrintNightmare  
+
+## Enumerating Missing Patches
+
+```
+PS C:\htb> systeminfo
+PS C:\htb> wmic qfe list brief
+PS C:\htb> Get-Hotfix
+```
+
+`C:\htb> wmic qfe list brief`
+
