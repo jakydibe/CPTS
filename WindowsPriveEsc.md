@@ -617,3 +617,13 @@ Ora abbiamo controllo totale sul domain controller e possiamo prendere tutte le 
 ## Retrieving NTLM hashes from Domain Controllers
 `j4k1dibe@htb[/htb]$ secretsdump.py server_adm@10.129.43.9 -just-dc-user administrator`
 
+# UAC User Access Control
+
+UAC e' una feature che abilita un prompt di consenso per attivita' che richiedono certi privilegi.
+
+Quando UAC e' abilitato le applicazioni e le task runnano sempre come non amministratore a meno che un amministratore permetta esplicitamente alle applicazioni di eseguire con permessi da administrator.
+
+E' una feature conveniente che previene cambiamenti non voluti daglia admin ma **NON E' UN SECURITY BOUNDARY**.
+
+UAC puo' dare piu' access rights al Token di un  applicazione
+
