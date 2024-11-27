@@ -797,3 +797,32 @@ PS C:\htb> Get-Hotfix
 
 `C:\htb> wmic qfe list brief`
 
+
+# Vulnerable Services
+
+Possiamo essere in grado di fare privesc su sistemi patchati e configurati bene se  gli utenti hanno il permesso di installare applicazioni di terze parti vulnerabili.
+
+E' comune trovare molte applicazioni e servizi diversi su windows, alcuni servizi/applicazioni ci permettono di fare privesc a SYSTEM.
+
+### Enumerate Installed Programs
+
+```
+C:\htb> wmic product get name
+
+Name
+Microsoft Visual C++ 2019 X64 Minimum Runtime - 14.28.29910
+Update for Windows 10 for x64-based Systems (KB4023057)
+Microsoft Visual C++ 2019 X86 Additional Runtime - 14.24.28127
+VMware Tools
+Druva inSync 6.6.3
+Microsoft Update Health Tools
+Microsoft Visual C++ 2019 X64 Additional Runtime - 14.28.29910
+Update for Windows 10 for x64-based Systems (KB4480730)
+Microsoft Visual C++ 2019 X86 Minimum Runtime - 14.24.28127
+```
+
+E dopo possiamo checkare se questi programmi sono vulnerabili
+Druva inSync 6.6.3 e' vulnerabile (PoC: https://www.exploit-db.com/exploits/49211) e gira in porta 6064.
+
+### Enumerating Local Ports
+prima abbiamo
