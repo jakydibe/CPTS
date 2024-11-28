@@ -990,3 +990,78 @@ PS C:\htb> $credential.GetNetworkCredential().password
 
 Str0ng3ncryptedP@ss!
 ```
+
+# Other Files for credential Theft
+ In an Active Directory environment, we can use a tool such as Snaffler to crawl network share drives for interesting file extensions such as .kdbx, .vmdk, .vdhx, .ppk, etc.
+
+ Potremmo trovare virtual hard drive che possiam montare ed estrarre hash degli amministratori, chiavi SSH private o file che hanno le password.
+
+ molte aziende danno ad ongi impiegado una cartella su una share mappata al loro User ID.
+
+## Cercare manualmente credenziali nel sistema
+possiamo usare alcuni comandi di questo cheatsheet (https://swisskyrepo.github.io/InternalAllTheThings/redteam/escalation/windows-privilege-escalation/)
+
+cerchiamo stringa password nei file
+
+`C:\htb> cd c:\Users\htb-student\Documents & findstr /SI /M "password" *.xml *.ini *.txt`, ti dice solo il file
+
+`C:\htb> findstr /si password *.xml *.ini *.txt *.config`, ti dice file e contenuto
+
+`C:\htb> findstr /spin "password" *.*`, ti dice file e contenuto
+
+`PS C:\htb> select-string -Path C:\Users\htb-student\Documents\*.txt -Pattern password` con powershell, dice file e contenuto
+
+
+### Search for file extensions
+`C:\htb> dir /S /B *pass*.txt == *pass*.xml == *pass*.ini == *cred* == *vnc* == *.config*`
+
+`C:\htb> where /R C:\ *.config`
+
+`PS C:\htb> Get-ChildItem C:\ -Recurse -Include *.rdp, *.config, *.vnc, *.cred -ErrorAction Ignore` con powershell
+
+## Sticky Note Passwords
+Spesso le persone usano l' app StickyNotes su windows per salvare info e password, senza realizzare che e' un Database.
+
+`C:\Users\<user>\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState\plum.sqlite`
+usando https://sqlitebrowser.org/dl/ possiamo caricare il DB e leggerlo
+
+oppure usiamo uno script in PowerShell per leggere il DB(https://github.com/RamblingCookieMonster/PSSQLite)
+
+`PS C:\htb> Set-ExecutionPolicy Bypass -Scope Process`, disbilitiamo execution policy
+
+```
+PS C:\htb> cd .\PSSQLite\
+PS C:\htb> Import-Module .\PSSQLite.psd1
+PS C:\htb> $db = 'C:\Users\htb-student\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState\plum.sqlite'
+PS C:\htb> Invoke-SqliteQuery -Database $db -Query "SELECT Text FROM Note" | ft -wrap
+```
+### Using strings to view DB content
+
+si puo' anche usare il comando strings per vedere la roba
+
+`j4k1dibe@htb[/htb]$  strings plum.sqlite-wal`
+
+
+## Altri file interessanti
+```
+%SYSTEMDRIVE%\pagefile.sys
+%WINDIR%\debug\NetSetup.log
+%WINDIR%\repair\sam
+%WINDIR%\repair\system
+%WINDIR%\repair\software, %WINDIR%\repair\security
+%WINDIR%\iis6.log
+%WINDIR%\system32\config\AppEvent.Evt
+%WINDIR%\system32\config\SecEvent.Evt
+%WINDIR%\system32\config\default.sav
+%WINDIR%\system32\config\security.sav
+%WINDIR%\system32\config\software.sav
+%WINDIR%\system32\config\system.sav
+%WINDIR%\system32\CCM\logs\*.log
+%USERPROFILE%\ntuser.dat
+%USERPROFILE%\LocalS~1\Tempor~1\Content.IE5\index.dat
+%WINDIR%\System32\drivers\etc\hosts
+C:\ProgramData\Configs\*
+C:\Program Files\Windows PowerShell\*
+```
+
+
