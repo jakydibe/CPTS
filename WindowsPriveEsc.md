@@ -825,4 +825,103 @@ E dopo possiamo checkare se questi programmi sono vulnerabili
 Druva inSync 6.6.3 e' vulnerabile (PoC: https://www.exploit-db.com/exploits/49211) e gira in porta 6064.
 
 ### Enumerating Local Ports
-prima abbiamo
+prima abbiamo visto che Druva inSync gira su porta 6064.
+
+`C:\htb> netstat -ano | findstr 6064`
+
+Si vede anche il PID del processo. (PID=3324)
+
+### Enumerating PID
+`PS C:\htb> get-process -Id 3324`
+
+### Enumerating Running Service
+`PS C:\htb> get-service | ? {$_.DisplayName -like 'Druva*'}` Al posto di Druva mettice il nome del servizio che cerchi.
+
+
+# Dll injection
+
+Dll injection consiste nel caricare una Dll in un processo remoto.
+
+## Dll injection semplice
+Dll injection semplice consiste nel:
+1) Prendere un handle al processo target
+2) Allocare memoria nel processo target e scriverci la Dll
+3) Prendere l' indirizzo della funzione **LoadLibraryA** con **(LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");**
+4) Creare un Thread remoto con **CreateRemoteThread** nel processo remoto e eseguire LoadLibraryA come callback e argomento la nostra Dll
+
+
+## Manual Mapping
+E' un metodo complesso e avanzato di Dll injection. Evita la detection facile non usando la WinAPI31 LoadLibrary.
+
+1) Caricare la Dll come raw data nel processo target
+2) Mappare le sezioni del Dll nel processo target (le parso?)
+3) Iniettare shellcode nel proceso target ed eseguilo. Questo shellcode riloca la Dll parsando gli import ed esegue le callback del TLS(Thread Local Storage) e infine chiama la Dll main
+
+## Reflective Dll Injection
+E' una tecnica che usa il reflective programming per caricare la dll in memoria di  un processo.
+La libreria stessa e' responabile per caricarsi nel processo implementando un minimal PE loader.
+
+Step:
+1) L' esecuzione e' trasferita alla **ReflectiveLoader function**. una funzione esportata che sta nella export table della Dll. Questo si puo' fare con **CreateRemoteThread** o un minimal bootstrap shellcode.
+2) Il file PE della Dll sta in una zna arbitraria di memoria. **ReflectiveLoader** function calcula la location in memoria per parsare gli Header
+3) ReflectiveLoader poi parsa la Kernel32.dll export table del target process per trovare indirizzi di **LoadLibraryA, GetProcAddress e VirtualAlloc**
+4) RefletiveLoader ora alloca una zona di memoria contigua dove carica l'immagine PE. (dopo verra' rilocata)
+5) Gli heade e sezioni del PE sono caricati nella nuova zona di memoria.
+6) la ReflectiveLoader carica eventuali librerie aggiiuntive  e risolve gli indirizzi delle funzioni importate.
+7) ReflectiveLoader processauna nuova copia della Dll Relocation Table
+8) ReflectiveLoader chiama il nuovo entry point, la DllMain con DLL_PROCESS_ATTACH e si esege la main
+9) Infine la ReflectiveLoader ritorna esecuzione al bootstrap shellcode che l'ha chiamata
+
+## Dll Hijackng
+Dll hijacking e' una tecnica per caricare Dll in un processo. Queste Dll possono essere caricate a runtime spesso se un applicazione non specifica il **FULL PATH** della Dll da chiamare.
+
+Il Dll searcch order dipende se **Safe DLL Search Mode** e' attivato(di default e' attivato). se e' attivato la user's current directory viene messa in basso.
+E' facile disabilitare Safe Dll Search Mode modificando la registry key.
+
+1) Press Windows key + R to open the Run dialog box.
+2) Type in Regedit and press Enter. This will open the Registry Editor.
+3) Navigate to HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager.
+4) In the right pane, look for the SafeDllSearchMode value. If it does not exist, right-click the blank space of the folder or right-click the Session Manager folder, select New and then DWORD (32-bit) Value. Name this new value as SafeDllSearchMode.
+5) Double-click SafeDllSearchMode. In the Value data field, enter 1 to enable and 0 to disable Safe DLL Search Mode.
+6) Click OK, close the Registry Editor and Reboot the system for the changes to take effect.
+
+
+With this mode enabled, applications search for necessary DLL files in the following sequence:
+
+1) The directory from which the application is loaded.
+2) The system directory.
+3) The 16-bit system directory.
+4) The Windows directory.
+5) The current directory.
+6) The directories that are listed in the PATH environment variable.
+
+However, if 'Safe DLL Search Mode' is deactivated, the search order changes to:
+
+1) The directory from which the application is loaded.
+2) The current directory.
+3) The system directory.
+4) The 16-bit system directory.
+5) The Windows directory
+6) The directories that are listed in the PATH environment variable
+
+Per fare Dll Hijacking prima devi trovare la Dll che il target sta provando a caricare. Ci sono tool specifici
+1) **Process Explorer**. della Sysinternals suite. da info sui running process
+2) **PE Explorer**, puo' aprire un PE e vedere da quali Dll si importano le funzioni
+
+## Proxying
+Possiamo usare un metodo chiamato Dll Proxying per eseguire l' Hijack.
+Creiamo una nuova Dll che avra' la funzione che viene esportata da quella 
+
+1) Creare una nuova Dll, con lo stesso nome di quella da hijackare, ed in grado di eseguire le funzioni della Dll originale.
+2) Caricare le funzioni originali dalla Dll effettiva
+3) Ritornare le
+
+## Invalid Libraries
+Un altra opzione per fare Hijack e' rimpiazzare una Dll valida che un programma sta provando a caricare ma NON TROVA con una nostra Dll.
+
+filtro per procmon: **If we change the procmon filter to focus on entries whose path ends in .dll and has a status of NAME NOT FOUND we can find such libraries in main.exe.**
+
+poi basta che scriviamo la dll 
+
+
+
