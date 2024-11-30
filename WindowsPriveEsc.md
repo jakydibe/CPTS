@@ -1481,4 +1481,4 @@ PS C:\htb> restic.exe -r E:\restic2\ backup C:\SampleFolder
 `PS C:\htb> restic.exe -r E:\restic2\ snapshots`
 
 ### Restic- restore a backup with ID
-`restic - Restore a Backup with ID`
+`PS C:\htb> restic.exe -r E:\restic2\ restore 9971e881 --target C:\Restore`
