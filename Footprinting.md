@@ -421,6 +421,10 @@ Si puo' fare con alcuni tool tipo gobuster o ffuf ma anche in bash
 `for sub in $(cat /home/kali/roba/kali-wordlists/amass/subdomains-top1mil-110000.txt);do dig $sub.inlanefreight.htb @10.129.171.45
  | grep -v ';\|SOA' | sed -r '/^\s*$/d' | grep $sub | tee -a subdomains.txt;done`.
 
+### COn ffuf
+
+`ffuf -c -u http://alert.htb -H "Host: FUZZ.alert.htb" -w ~worslists.txt  -fc 301`
+
 con **DNSenum**
 `j4k1dibe@htb[/htb]$ dnsenum --dnsserver 10.129.14.128 --enum -p 0 -s 0 -o subdomains.txt -f /opt/useful/seclists/Discovery/DNS/subdomains-top1million-110000.txt inlanefreight.htb`.
 
