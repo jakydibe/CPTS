@@ -227,3 +227,63 @@ Questo ci permette di estrarre credenziali da un servizio in esecuzione, una sch
 ### Dumping SAM hashes Remotely
 `j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.42.198 --local-auth -u bob -p HTB_@cademy_stdnt! --sam`
 
+
+# Attacking LSASS
+
+Oltre a prendere copie del SAM Database possiamo targettare LSASS.
+
+Quando si fa l' initial login LSASS fara':
+1) Cache credentials locally in memory
+2) Create Acess Token
+3) Enforce security policies
+4) Write to Windows Security log
+
+
+Dovremo dumpare la memoria del processo LSASS. Si puo' fare con il **Task Manager**. (tasto destro sul processo e Create dump file).
+Questo creera' **lsass.DMP** in `C:\Users\loggedonusersdirectory\AppData\Local\Temp`
+
+
+## Dumping lsass.exe dump with Rundll32.exe & Comsvcs.dll method
+
+Troviamo il PID di Lsass.exe: 
+
+`C:\Windows\system32> tasklist /svc`
+
+troviamo che ha PID 672
+
+`rundll32 C:\windows\system32\comsvcs.dll, MiniDump 672 C:\lsass.dmp full`  C:\lsass.dmp e' l' output file.
+
+## Using pypykatz to extract credentials
+
+Una volta che abbiamo il dump file possiamo usare pypykatz (https://github.com/skelsec/pypykatz) per provare ad estrarre credenziali dal file.
+
+`j4k1dibe@htb[/htb]$ pypykatz lsa minidump /home/peter/Documents/lsass.dmp`
+
+### MSV
+
+Nell' output di pypykatz andiamo a cercare MSV. MSV E' un authentication package in windows che LSA chiama per validare i tentativi di login sul SAM database.
+
+Pypykatz estrae SID, USername e Dominio e pure hash in questa sezione.
+
+### WDIGEST
+WDIGEST e' un protocollo di autenticazione piu' vecchio abilitato di default da windXP a win8. e winserver2003-winserer2012.
+
+LSASS salva le credenziali usata da WDIGEST in celar-text. QUindi se troviamo qualcosa qui e' in cleartext.
+
+COmunque nuove versioni di windows ce l'hanno disabilitato di default.
+
+### Kerberos
+
+La parte di output di kerbero potrebbe rivelare ticket di autenticazione. LSASS caches passwords, ekeys, tickets, and pins associated with Kerberos. It is possible to extract these from LSASS process memory and use them to access other systems joined to the same domain.
+
+### DPAPI
+
+Data Protection Application Programming Interface e' un set di API di windwows usate per criptare e decriptare DPAPI data 
+
+
+
+
+
+
+
+
