@@ -158,3 +158,22 @@ Cewl e' un tool per fare la scan di potenziali keyword dal sito web di un' azien
 **-m** e' la minimum length della parola
 
 **--lowercase** 
+
+# Password Reuse / Default Passwords
+
+E' comune che utenti e admin usano la stessa password in piu' app diverse ed e' anche comunque che lascino le credenziali di default dopo l' installazione di un servizio.
+
+## Credential stuffing
+Ci sono vari database di default credentials.
+
+**cheat sheet per default credentials: https://github.com/ihebski/DefaultCreds-cheat-sheet**
+
+Attaccare un servizio bruteforzando le default password si dice Credential Stuffing.
+
+### Credential stuffing con Hydra
+`j4k1dibe@htb[/htb]$ hydra -C <user_pass.list> <protocol>://<IP>`
+
+COnsidera che user_pass.list deve avere la sintassi **username:password**
+
+
+
