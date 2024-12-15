@@ -82,3 +82,79 @@ per vederli: `j4k1dibe@htb[/htb]$ locate *2john*`
 ### Bruteforce SMB with crackmapexec
 `j4k1dibe@htb[/htb]$ crackmapexec smb 10.129.42.197 -u "user" -p "password" --shares`
 
+
+# Password Mutations
+
+Molto spesso le persone preferiscono password semplici a password sicure ma devono rispettare le norme imposte per la creazione di password.
+
+Statisticamente la maggior parte di password non sono lunghe piu' di 10 caratteri.
+
+Se abbiamo informazioni su cose tipo il nome loro, il nome dei loro animali domestici, possiamo provare a generare tutte password simili.
+
+Ci sono alcune opzioni di hashcat per modificare le password
+
+| Function | Description                                     |
+|----------|-------------------------------------------------|
+| :        | Do nothing.                                    |
+| l        | Lowercase all letters.                         |
+| u        | Uppercase all letters.                         |
+| c        | Capitalize the first letter and lowercase others. |
+| sXY      | Replace all instances of X with Y.             |
+| $!       | Add the exclamation character at the end.      |
+
+
+## Generating passwords with hashcat
+```
+j4k1dibe@htb[/htb]$ cat custom.rule
+
+:
+c
+so0
+c so0
+sa@
+c sa@
+c sa@ so0
+$!
+$! c
+$! so0
+$! sa@
+$! c so0
+$! c sa@
+$! so0 sa@
+$! c so0 sa@
+
+
+
+j4k1dibe@htb[/htb]$ hashcat --force password.list -r custom.rule --stdout | sort -u > mut_password.list
+j4k1dibe@htb[/htb]$ cat mut_password.list
+
+password
+Password
+passw0rd
+Passw0rd
+p@ssword
+P@ssword
+P@ssw0rd
+password!
+Password!
+passw0rd!
+p@ssword!
+Passw0rd!
+P@ssword!
+p@ssw0rd!
+P@ssw0rd!
+```
+
+### List hashcat existing rules
+`j4k1dibe@htb[/htb]$ ls /usr/share/hashcat/rules/`
+
+## Cewl
+Cewl e' un tool per fare la scan di potenziali keyword dal sito web di un' azienda e salvare in una lista. poi
+
+`j4k1dibe@htb[/htb]$ cewl https://www.inlanefreight.com -d 4 -m 6 --lowercase -w inlane.wordlist`
+
+**-d** flag serve a fare lo spider in profondita'
+
+**-m** e' la minimum length della parola
+
+**--lowercase** 
