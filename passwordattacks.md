@@ -168,6 +168,11 @@ Ci sono vari database di default credentials.
 
 **cheat sheet per default credentials: https://github.com/ihebski/DefaultCreds-cheat-sheet**
 
+```
+$ pip3 install defaultcreds-cheat-sheet
+$ creds search tomcat
+```
+
 Attaccare un servizio bruteforzando le default password si dice Credential Stuffing.
 
 ### Credential stuffing con Hydra
