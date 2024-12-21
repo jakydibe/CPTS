@@ -519,4 +519,6 @@ Possiamo voler avere accesso ad applicazioni o software installati che si posson
 
 `j4k1dibe@htb[/htb]# xfreerdp /v:192.168.220.152 /u:lewen /pth:300FF5E89EF33F83A8146C10F5AB9BB9` Login with Pass the Hash.
 
+## Latest RDP Vulns
 
+CVE-2019-0708, BlueKeep e' una vuln che da RCE
