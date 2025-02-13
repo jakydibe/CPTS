@@ -537,7 +537,7 @@ Se il DNS e' configurato male(Nessun whitelisting di IP) chiunque puo' fare una 
 
 
 ### Usare dig con AXFR per dumpare tutti i DNS namesaces
-`j4k1dibe@htb[/htb]# dig AXFR @ns1.inlanefreight.htb inlanefreight.htb`
+`j4k1dibe@htb[/htb]# dig AXFR @<IP> XX.inlanefreight.htb`
 
 
 ### Usare Fierce per enumerare tutti i server DNS del root domain e fare una scan per zone transfer
