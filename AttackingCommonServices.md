@@ -522,3 +522,72 @@ Possiamo voler avere accesso ad applicazioni o software installati che si posson
 ## Latest RDP Vulns
 
 CVE-2019-0708, BlueKeep e' una vuln che da RCE
+
+
+# Attacking DNS
+DNS gira principalmente in porta 53 sia TCP che UDP.
+
+### Enumeration
+`j4k1dibe@htb[/htb]# nmap -p53 -Pn -sV -sC 10.10.110.213`
+
+## DNS Zone Transfer
+Dato che il DNS comprende piu' DNS ZOne, il server DNS utilizza la DNS Zone transfer per copiare una porzione del database di queste zone ad un altro server DNS.
+
+Se il DNS e' configurato male(Nessun whitelisting di IP) chiunque puo' fare una DNS Zone transfer dato che non richiede autenticazione.
+
+
+### Usare dig con AXFR per dumpare tutti i DNS namesaces
+`j4k1dibe@htb[/htb]# dig AXFR @ns1.inlanefreight.htb inlanefreight.htb`
+
+
+### Usare Fierce per enumerare tutti i server DNS del root domain e fare una scan per zone transfer
+
+`j4k1dibe@htb[/htb]# fierce --domain zonetransfer.me`
+
+## Domain takeover & Subdomain Enumeration
+il **Domain takeover** significa registrare un domain name non esistente per ottenere controllo su un altro dominio. Ad esempio si puo' fare quando un dominio e' scaduto.
+
+Il domain takeover si puo' pure fare facendo un **subdomain takeover**.
+
+un DNS Canonical Name (**CNAME**) record e' usato per mappare diversi domini ad un parent domain(Quindi puntano tutti allo stesso dominio).
+
+
+## Subdomain enumeration
+(https://github.com/projectdiscovery/subfinder)
+
+### con Subfinder
+`j4k1dibe@htb[/htb]# ./subfinder -d inlanefreight.com -v `
+
+### con Subbrute
+```
+j4k1dibe@htb[/htb]$ git clone https://github.com/TheRook/subbrute.git >> /dev/null 2>&1
+j4k1dibe@htb[/htb]$ cd subbrute
+j4k1dibe@htb[/htb]$ echo "ns1.inlanefreight.com" > ./resolvers.txt
+j4k1dibe@htb[/htb]$ ./subbrute inlanefreight.com -s ./names.txt -r ./resolvers.txt
+```
+
+## Enumerare il CNAME per alcuni sottodomini
+`j4k1dibe@htb[/htb]# host support.inlanefreight.com`
+
+vediamo cosi' gli alias. `support.inlanefreight.com is an alias for inlanefreight.s3.amazonaws.com`
+
+
+## Takeover
+https://github.com/EdOverflow/can-i-take-over-xyz, repo per fare attacchi di subdomain takeover
+
+## DNS Spoofing
+Detto anche DNS Cache Poisoning, consiste nell' alterare i DNS record con informazioni false per redirectare il traffico a siti fraudolenti.
+
+Si puo' fare con attacchi MiTM andando a spoofare le query.
+
+Exploitare una vulnerabilita' trovata in un server DNS
+
+
+## Local DNS Cache Poisoning
+COn tool tipo Ettercap o bettercap e' possibile spoofare DNS cache in locale
+
+Prima cosa modifichiamo 
+`j4k1dibe@htb[/htb]# cat /etc/ettercap/etter.dns` per mappare dominio all'attaccante
+
+con ettercap
+Bho poi facciamo **Hosts > Scan For Hosts > Plugins > Manage Plugins > dns_spoof**
