@@ -591,3 +591,9 @@ Prima cosa modifichiamo
 
 con ettercap
 Bho poi facciamo **Hosts > Scan For Hosts > Plugins > Manage Plugins > dns_spoof**
+
+
+# Latest DNS Vulnerabilities
+
+Molto domini e sottodomini che riusciamo a fare subdomain takeover.
+
