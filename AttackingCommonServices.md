@@ -597,3 +597,135 @@ Bho poi facciamo **Hosts > Scan For Hosts > Plugins > Manage Plugins > dns_spoof
 
 Molto domini e sottodomini che riusciamo a fare subdomain takeover.
 
+
+# Attacking Mail services
+
+Un server mail sij occupa di gestire e mandare le email in una rete. 
+
+Quando mandiamo una mail il programma che gestisce le mail in locale si connete ad un server **SMTP** (Simple Mail Transfer Protocol). 
+
+Quando scarichiamo email invece la nostra app si connettera' ad un server **POP3 o IMAP4** per salvare messagg in locali.
+
+Di default POP3 rimuove i messaggi scaricati dai server email. Questo rende difficile collegare piu' dispositivi perche' le mail sono solo salvate in locale. pero' si puo' configurare per salvarle anche nel server.
+
+Dall'altro lato di default IMAP4 non rimuove i messaggi dal server mail.
+
+
+## Enumeration
+I server mail sono complessi e di solito richiedono di enumerare piu' server, porte e servizi, In piu' molte aziende oggigiorno tengono i propri servizi email nel cloud con servizi tipo G-suite o microsoft 365. Percio' l' approccio all'attacco dipende da che servizio e' in uso.
+
+Per identificare un mail server possiamo usare i **MX** (Mail exchanger) DNS record. Che specifica qual'e' il server mail che deve gestire le mail per quel dominio.
+Tipicamente il MX puo' puntare ad un array di email server per ragioni di load balancing/redundancy.
+
+### Enumeration con host
+`j4k1dibe@htb[/htb]$ host -t MX hackthebox.eu`
+
+### Con Dig
+`j4k1dibe@htb[/htb]$ dig mx plaintext.do | grep "MX" | grep -v ";"`
+
+
+E' importante enumerar e capire chi e' il provider perche' ogni provider puo' fornire un suo specifico vettore di attacco.
+
+```
+Port	Service
+TCP/25	SMTP Unencrypted
+TCP/143	IMAP4 Unencrypted
+TCP/110	POP3 Unencrypted
+TCP/465	SMTP Encrypted
+TCP/587	SMTP Encrypted/STARTTLS
+TCP/993	IMAP4 Encrypted
+TCP/995	POP3 Encrypted
+```
+### Enumerare con nmap
+`j4k1dibe@htb[/htb]$ sudo nmap -Pn -sV -sC -p25,143,110,465,587,993,995 10.129.14.128`
+
+
+## Misconfiguration
+
+I servizi di email usano l'autenticazione per mandare/ricevere mail. Una misconfiguration puo' ad esempio avvenire quando SMTP permette autenticazione anonima o supporta protocolli che si possono usare per enumerare username validi.
+
+
+### Authenticazion
+Il server SMTP ha vari comandi pper enumerare username vailidi ( VRFY, EXPN, and RCPT TO.)
+
+Se riusciamo ad enumerare username validi possiamo provare password spray, brute force etc.etc.
+
+### Comando VRFY
+si usa del tipo **VRFY <nomeutente>**
+```
+j4k1dibe@htb[/htb]$ telnet 10.10.110.20 25
+
+Trying 10.10.110.20...
+Connected to 10.10.110.20.
+Escape character is '^]'.
+220 parrot ESMTP Postfix (Debian/GNU)
+
+
+VRFY root
+
+252 2.0.0 root
+
+
+VRFY www-data
+
+252 2.0.0 www-data
+
+
+VRFY new-user
+
+550 5.1.1 <new-user>: Recipient address rejected: User unknown in local recipient table
+```
+
+### EXPN
+EXPN si usa in modo molto simile a VRFY
+
+```
+j4k1dibe@htb[/htb]$ telnet 10.10.110.20 25
+
+Trying 10.10.110.20...
+Connected to 10.10.110.20.
+Escape character is '^]'.
+220 parrot ESMTP Postfix (Debian/GNU)
+
+
+EXPN john
+
+250 2.1.0 john@inlanefreight.htb
+
+
+EXPN support-team
+
+250 2.0.0 carol@inlanefreight.htb
+250 2.1.5 elisa@inlanefreight.htb
+```
+
+### RCPT TO
+```
+j4k1dibe@htb[/htb]$ telnet 10.10.110.20 25
+
+Trying 10.10.110.20...
+Connected to 10.10.110.20.
+Escape character is '^]'.
+220 parrot ESMTP Postfix (Debian/GNU)
+
+
+MAIL FROM:test@htb.com
+it is
+250 2.1.0 test@htb.com... Sender ok
+
+
+RCPT TO:julio
+
+550 5.1.1 julio... User unknown
+
+
+RCPT TO:kate
+
+550 5.1.1 kate... User unknown
+
+
+RCPT TO:john
+
+250 2.1.5 john... Recipient ok
+```
+
