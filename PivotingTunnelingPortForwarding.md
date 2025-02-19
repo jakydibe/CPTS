@@ -453,3 +453,68 @@ In questo caso usando l'opzione **--reverse**, dovremmo startare il server da no
 
 
 Alla fine il risultato raggiunto e' lo stesso ma cosi' bypassiamo regole frewall in-bound
+
+# ICMP tunneling with SOCKS
+
+ICMP tunneling incapsula il tuo traffico dentro pacchetti ICMP che contengono echo requests e responses.
+
+ICMP tunneling funziona solo quando le ping responses sono permesse in una rete firewallata. Quando unhost puo' pingare un server esterno si puo' incapsulare il traffico nella ping echo request e mandarlo ad un server esterno.
+
+si usa il tool **ptunnel-ng**, pre creare un tunne tra il pivot server il nostro attack host.
+
+### Setting up
+`j4k1dibe@htb[/htb]$ git clone https://github.com/utoni/ptunnel-ng.git`
+
+`j4k1dibe@htb[/htb]$ sudo ./autogen.sh `
+
+### Alternative approach to build it
+```
+  ICMP Tunneling with SOCKS
+j4k1dibe@htb[/htb]$ sudo apt install automake autoconf -y
+j4k1dibe@htb[/htb]$ cd ptunnel-ng/
+j4k1dibe@htb[/htb]$ sed -i '$s/.*/LDFLAGS=-static "${NEW_WD}\/configure" --enable-static $@ \&\& make clean \&\& make -j${BUILDJOBS:-4} all/' autogen.sh
+j4k1dibe@htb[/htb]$ ./autogen.sh
+```
+
+`j4k1dibe@htb[/htb]$ scp -r ptunnel-ng ubuntu@10.129.202.64:~/` trasferiamo sul pivot
+
+`ubuntu@WEB01:~/ptunnel-ng/src$ sudo ./ptunnel-ng -r10.129.202.64 -R22`. Startiamo server sul pivot
+
+`j4k1dibe@htb[/htb]$ sudo ./ptunnel-ng -p10.129.202.64 -l2222 -r10.129.202.64 -R22`, connettiamo al server dall' attack host.
+
+`j4k1dibe@htb[/htb]$ ssh -p2222 -lubuntu 127.0.0.1`, tunneling connessione ssh con ICMP tunnel
+
+### Enabling dynamic port forwarding  over SSH
+
+`j4k1dibe@htb[/htb]$ ssh -D 9050 -p2222 -lubuntu 127.0.0.1`
+
+### Proxychaining through ICMP tunnel
+
+`j4k1dibe@htb[/htb]$ proxychains nmap -sV -sT 172.16.5.19 -p3389`
+
+
+# RDP and SOCKS tunneling with SocksOverRDP
+
+Molto spesso puo' capitare di essere in una rete windows ed non si puo' usar SSH pivoting. dovremo usare tool per WIndows. **SocksOverRDP** e' un esempio e lui usa **Dynamic Virtual Channles (DVC)** dalle feature di Remote Desktop Service. DVC e' responsabile per tunnelare i pacchetti over RDP. Alcuni esempi di utilizzo e' tipo mandare la clipboard.
+
+poi potremo usare Proxifier portable binary
+
+https://github.com/nccgroup/SocksOverRDP/releases
+
+https://www.proxifier.com/download/#win-tab
+
+
+### Loading SocksOverRDP.dll using regsvr32.exe
+
+`C:\Users\htb-student\Desktop\SocksOverRDP-x64> regsvr32.exe SocksOverRDP-Plugin.dll`
+
+
+Ora ci possiamo connettere alla vittima over RDP usando **mstc.exe**, e dovremmo ricever un prompt che il plugin e' abilitato, e ascoltera' in 127.0.0.1:1080.
+
+
+```
+C:\Users\htb-student\Desktop\SocksOverRDP-x64> netstat -antb | findstr 1080
+
+  TCP    127.0.0.1:1080         0.0.0.0:0              LISTENING
+
+```
