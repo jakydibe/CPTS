@@ -58,3 +58,61 @@ Cerca sui social network. Offerte di lavoro
 
 ### Credential Hunting
 **j4k1dibe@htb[/htb]$ sudo python3 dehashed.py -q inlanefreight.local -p**. Dehashed is a great tool. also with API
+
+
+# Setting up
+
+## Identifying Hosts
+Possiamo usare Wireshark, TCPDump, richieste ARP, MDNS.
+
+
+`└──╼ $sudo -E wireshark`
+cerchiamo pacchetti **ARP, MDNS**
+
+`j4k1dibe@htb[/htb]$ sudo tcpdump -i ens224 `
+
+In windows e' pure builtin **pktmon.exe**
+
+### Responder
+E' un tool usato per ascoltare, analizzare e posionare LLMNR, NBT-NS e MDNS request and responses.
+
+`sudo responder -I ens224 -A `
+
+### FPing Active cheks
+`j4k1dibe@htb[/htb]$ fping -asgq 172.16.5.0/23`, Fping e' simile a ping, ma puo' pingare piu' target perche' asincrono.
+
+`j4k1dibe@htb[/htb]$ fping -asgq 172.16.5.0/23`
+-a, alive, -s print stats, -g target list, q not show per-target results
+
+### Nmap
+`sudo nmap -v -A -iL hosts.txt -oN /home/htb-student/Documents/host-enum`
+
+## Identifying Users
+
+### Keybrute- Internal AD Username Enumeration
+
+**Kerbrute** e' un opzione stealth per fare domain account enumeration. Sfrutta il fatto che Kerberos pre-authentication failures spesso non triggerano logs o alert. Usando questo insieme a jsmith.txt/jsmith2.txt user list da **https://github.com/insidetrust/statistically-likely-usernames**
+
+
+Si possono scaricare i binari precompilati da https://github.com/ropnop/kerbrute/releases/tag/v1.0.3
+
+`j4k1dibe@htb[/htb]$ sudo git clone https://github.com/ropnop/kerbrute.git`
+
+`j4k1dibe@htb[/htb]$ make help`, Listing compiling options
+
+`sudo make all`, compiliamo per tutto
+
+se vogliamo AGGIUNGIAMOLO AL PATH, oppure mettiamolo in /bin `j4k1dibe@htb[/htb]$ sudo mv kerbrute_linux_amd64 /usr/local/bin/kerbrute`
+
+### Enumerating Users with Kerbrute
+
+`j4k1dibe@htb[/htb]$ kerbrute userenum -d INLANEFREIGHT.LOCAL --dc 172.16.5.5 jsmith.txt -o valid_ad_users`
+
+
+## Identifying Potential Vulnerabilities.
+
+In una macchina locale **SYSTEM** ha tutti i permessi. Avere accesso a SYSTEM su un account domain-joined ci permette di enumerare la Active Directory impersonandoci come account di quel computer.
+
+
+
+
