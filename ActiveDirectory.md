@@ -37,4 +37,24 @@ Public-Facing Company Websites|	Often, the public website for a corporation will
 Cloud & Dev Storage Spaces |	GitHub, AWS S3 buckets & Azure Blog storage containers, Google searches using "Dorks"
 Breach Data Sources	|HaveIBeenPwned to determine if any corporate email accounts appear in public breach data, Dehashed to search for corporate emails with cleartext passwords or hashes we can try to crack offline. We can then try these passwords against any exposed login portals (Citrix, RDS, OWA, 0365, VPN, VMware Horizon, custom applications, etc.) that may use AD authentication.
 
+## Trovare Address Spaces
 
+il **BGP-Toolkit** hostato su **https://he.net/** e' molto utile per cercare quali blocchi di indirizzi sono assegnati a queli organizzazione e quali ASN.
+
+## DNS
+
+DNS e' un ottimo modo per trovare altri host non rilevati
+
+Sites like domaintools, and viewdns.info are great spots to start.
+
+
+## Public Data
+Cerca sui social network. Offerte di lavoro
+
+### Hunting for emails and files
+`Using the dork intext:"@inlanefreight.com" inurl:inlanefreight.com,`
+
+`Using filetype:pdf inurl:inlanefreight.com`
+
+### Credential Hunting
+**j4k1dibe@htb[/htb]$ sudo python3 dehashed.py -q inlanefreight.local -p**. Dehashed is a great tool. also with API
