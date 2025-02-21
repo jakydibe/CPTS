@@ -134,6 +134,8 @@ I tool per fare questo attacco sono: Responder, Inveigh e Metasploit.
 ### Con Responder
 `sudo responder -I ens224 `, starting responder
 
+i log di Responder sono storati in **/usr/share/responder/logs**
+
 `j4k1dibe@htb[/htb]$ hashcat -m 5600 forend_ntlmv2 /usr/share/wordlists/rockyou.txt`, cracking the hash with hashcat mode 5600
 
 
