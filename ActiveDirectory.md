@@ -115,4 +115,28 @@ In una macchina locale **SYSTEM** ha tutti i permessi. Avere accesso a SYSTEM su
 
 
 
+# LLMNR/NBT-NS Poisoning from Linux
+LLMNR(Link-Local Multicast Name Resolution) and (NBT-NS) NetBIOS Name Service broadcasts sono protocolli che possiamo exploitare con approccio MiTM e sniffare credenziali.
+
+Sono componenti microsoft che servono come metodi alternativi di identificazione dell' host e possono essere usate quando il DNS fallisce. Praticamente quando il DNS resolution fallisce la macchina provera' a chiedere ad altre macchine nella rete locale l'indirizzo corretto  via LLMNR. LLMNR Permette di fare host resolution .
+
+LLMNR e' basato su DNS e usa porta 5355 UDP e NBT-NS 137 UDP.
+
+LA VULN STA perche' Quando LLMNR e NBT-NS sono usate per name resolution  chiunque nella rete puo' rispondere. Possiamo usare **Responder** per poisonare queste richieste. Con accesso alla rete locale possiamo spoofare una authoritative name resolution source rispondendo al traffico LLMNR e NBT-NS.
+
+Cosi' le vittime comunicheranno con noi perche' pensano che noi siamo il requested host.
+
+![image](https://github.com/user-attachments/assets/7a426af5-12bd-4aab-93ca-f109d23cef10)
+
+
+I tool per fare questo attacco sono: Responder, Inveigh e Metasploit.
+
+### Con Responder
+`sudo responder -I ens224 `, starting responder
+
+`j4k1dibe@htb[/htb]$ hashcat -m 5600 forend_ntlmv2 /usr/share/wordlists/rockyou.txt`, cracking the hash with hashcat mode 5600
+
+
+
+
 
