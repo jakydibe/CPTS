@@ -143,10 +143,119 @@ i log di Responder sono storati in **/usr/share/responder/logs**
 
 scarica Inveigh da https://github.com/Kevin-Robertson/Inveigh
 
+
 ```
 PS C:\htb> Import-Module .\Inveigh.ps1
 PS C:\htb> (Get-Command Invoke-Inveigh).Parameters
 ```
 
 `PS C:\htb> Invoke-Inveigh Y -NBNS Y -ConsoleOutput Y -FileOutput Y`
+
+# Enumerating Password Policies
+
+Ci sono vari modi per retrievare le password policy del dominio. Dipende da come e' configurato.
+
+Se abbiamo gia' delle credenziali valide possiamo enumerare con **CrackMapExec or rpcclient**
+
+### Con CrackMapExec
+
+`j4k1dibe@htb[/htb]$ crackmapexec smb 172.16.5.5 -u avazquez -p Password123 --pass-pol`, con crackmapexec (https://github.com/byt3bl33d3r/CrackMapExec)
+
+
+### Con SMB NULL Sessions
+
+Anche senza credenziali possiamo ottenere la password policy con SMB NULL sessions o LDAP Anonymous bind.
+
+SMB NULL Sessions danno ad un attaccante non autenticato informazioni tipo lista completa di utenti, gruppi, computer etc.etc.
+
+SMB NULL misconfiguration stanno spesso in legacy Domain Controller
+
+### Con rpcclient
+
+```
+j4k1dibe@htb[/htb]$ rpcclient -U "" -N 172.16.5.5
+
+rpcclient $> querydominfo
+Domain:		INLANEFREIGHT
+Server:		
+Comment:	
+Total Users:	3650
+Total Groups:	0
+Total Aliases:	37
+Sequence No:	1
+Force Logoff:	-1
+Domain Server State:	0x1
+Server Role:	ROLE_DOMAIN_PDC
+Unknown 3:	0x1
+
+
+rpcclient $> getdompwinfo
+min_password_length: 8
+password_properties: 0x00000001
+	DOMAIN_PASSWORD_COMPLEX
+
+```
+
+### Con enum4linux
+(https://labs.portcullis.co.uk/tools/enum4linux/)
+
+`j4k1dibe@htb[/htb]$ enum4linux -P 172.16.5.5`
+
+`j4k1dibe@htb[/htb]$ enum4linux-ng -P 172.16.5.5 -oA ilfreight`, formato json
+`j4k1dibe@htb[/htb]$ cat ilfreight.json `
+
+## Enumerating null sessions from Windows
+```
+C:\htb> net use \\DC01\ipc$ "" /u:""
+The command completed successfully.
+```
+
+
+ Quando lo facciamo potrebbero occorrere alcuni errori: **Account disabled, Password incorrect, Account locked out**
+
+
+## LDAP Anonymous Bind , enumeriamo password policy da Linux
+(https://linux.die.net/man/1/ldapsearch)
+
+`j4k1dibe@htb[/htb]$ ldapsearch -h 172.16.5.5 -x -b "DC=INLANEFREIGHT,DC=LOCAL" -s sub "*" | grep -m 1 -B 10 pwdHistoryLength`
+
+## Enumerare password policy da Windows
+` Enumerating & Retrieving Password Policies
+
+C:\htb> net accounts
+
+Force user logoff how long after time expires?:       Never
+Minimum password age (days):                          1
+Maximum password age (days):                          Unlimited
+Minimum password length:                              8
+Length of password history maintained:                24
+Lockout threshold:                                    5
+Lockout duration (minutes):                           30
+Lockout observation window (minutes):                 30
+Computer role:                                        SERVER
+The command completed successfully.
+`
+
+### Usando Powerview
+```
+PS C:\htb> import-module .\PowerView.ps1
+PS C:\htb> Get-DomainPolicy
+
+Unicode        : @{Unicode=yes}
+SystemAccess   : @{MinimumPasswordAge=1; MaximumPasswordAge=-1; MinimumPasswordLength=8; PasswordComplexity=1;
+                 PasswordHistorySize=24; LockoutBadCount=5; ResetLockoutCount=30; LockoutDuration=30;
+                 RequireLogonToChangePassword=0; ForceLogoffWhenHourExpire=0; ClearTextPassword=0;
+                 LSAAnonymousNameLookup=0}
+KerberosPolicy : @{MaxTicketAge=10; MaxRenewAge=7; MaxServiceAge=600; MaxClockSkew=5; TicketValidateClient=1}
+Version        : @{signature="$CHICAGO$"; Revision=1}
+RegistryValues : @{MACHINE\System\CurrentControlSet\Control\Lsa\NoLMHash=System.Object[]}
+Path           : \\INLANEFREIGHT.LOCAL\sysvol\INLANEFREIGHT.LOCAL\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHI
+                 NE\Microsoft\Windows NT\SecEdit\GptTmpl.inf
+GPOName        : {31B2F340-016D-11D2-945F-00C04FB984F9}
+GPODisplayName : Default Domain Policy
+
+```
+
+**BISOGNA FARE ATTENZIONE A NON BLOCCARE GLI ACCOUNT. MOLTO SPESSO HANNO UN LIMITE DI BLOCCO BASSO**
+
 
