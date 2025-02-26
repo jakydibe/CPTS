@@ -513,3 +513,87 @@ Se vogliamo possiamo zippare tutti gli output json con `zip -r ilfreight_bh.zip 
 
 La gui ci fa vedre grafici, ossiamo vedere roba tipo lo shortest oath per il domain admin. Ci da path logici tramite utenti, gruppi, host etc,etc, e tutte le varie relazioni che ci possono aiutare a scalare fino a domain admin.
 
+# Credentialed Enumeration from Windows
+
+ActiveDirectory PowerShell module.  (https://docs.microsoft.com/en-us/powershell/module/activedirectory/?view=windowsserver2022-ps) e' una toolsuite di powershell cmdlets fatti per gli admin di AD.
+
+### Discover modules insalled
+`PS C:\htb> Get-Module`
+
+### Loead ActiveDirectory Module
+```
+PS C:\htb> Import-Module ActiveDirectory
+PS C:\htb> Get-Module
+
+ModuleType Version    Name                                ExportedCommands
+---------- -------    ----                                ----------------
+Manifest   1.0.1.0    ActiveDirectory                     {Add-ADCentralAccessPolicyMember, Add-ADComputerServiceAcc...
+Manifest   3.1.0.0    Microsoft.PowerShell.Utility        {Add-Member, Add-Type, Clear-Variable, Compare-Object...}
+Script     2.0.0      PSReadline  
+```
+
+### Get Domain info
+`PS C:\htb> Get-ADDomain`
+
+### Get AD USers
+`PS C:\htb> Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName`
+
+### Checking for Trust Replationships
+domain trust relationships
+`PS C:\htb> Get-ADTrust -Filter *`
+
+### Group Enumeration
+`PS C:\htb> Get-ADGroup -Filter * | select name`
+
+### Detailed group info
+`PS C:\htb> Get-ADGroup -Identity "Backup Operators"`
+
+### Group membership
+`PS C:\htb> Get-ADGroupMember -Identity "Backup Operators"`
+
+## PowerView
+e' un tool powerhsell tipo BloodHound che ci da un sacco di info
+
+### Domain User information, Info su un utente
+`PS C:\htb> Get-DomainUser -Identity mmorgan -Domain inlanefreight.local | Select-Object -Property name,samaccountname,description,memberof,whencreated,pwdlastset,lastlogontimestamp,accountexpires,admincount,userprincipalname,serviceprincipalname,useraccountcontrol`
+
+### Recursive group membership
+`PS C:\htb>  Get-DomainGroupMember -Identity "Domain Admins" -Recurse`
+
+### Trust enumeration
+`PS C:\htb> Get-DomainTrustMapping`
+
+### Testing local admin access
+`PS C:\htb> Test-AdminAccess -ComputerName ACADEMY-EA-MS01`
+
+### Trovare utenti con SPN Set
+
+`PS C:\htb> Get-DomainUser -SPN -Properties samaccountname,ServicePrincipalName`
+
+
+## SharpView
+
+PowerView e' in parte deprecato.  ora si usa piu' SharpView
+### Enum un utente con sharpview
+`PS C:\htb> .\SharpView.exe Get-DomainUser -Identity forend`
+
+## Shaffler
+
+**Shaffler** e' un tool che ci aiuta ad acquisire credenziali e altri dati sensibili in AD. Funziona ottenendo una lista di host nel dominio ed enumerando questi host per share e directory leggibili
+
+`Snaffler.exe -s -d inlanefreight.local -o snaffler.log -v data`
+
+## SharpHound
+`PS C:\htb> .\SharpHound.exe -c All --zipfilename ILFREIGHT`
+
+Zopo lo zip lo trasferiamo alla nostra GUI
+
+### Unsupported Operating Systems
+Cercare computer con **Unsupported Operating Systems** e' utlissimo perche' ci mostra computer vecchi e possibilmente vulnerabili a CVE vecchie
+
+### Local Admins
+Spesso ci sono tanti local admins non necessari, cerchiamoli su bloodhound
+
+
+
+This query shows two hosts, one running Windows 7 and one running Windows Server 2008 (both of which are not "live" in our lab). Sometimes we will see hosts that are no longer powered on but still appear as records in AD. We should always validate whether they are "live" or not before making recommendations in our reports. We may write up a high-risk finding for Legacy Operating Systems or a best practice recommendation for cleaning up old records in AD.
