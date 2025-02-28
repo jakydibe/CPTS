@@ -985,3 +985,53 @@ If we have this access over a computer object and the Local Administrator Passwo
 
 
 ![image](https://github.com/user-attachments/assets/5b313170-4737-41b7-a890-3a057d0dd43b)
+
+
+# ACL Enumeration
+
+## Con PowerView
+`PS C:\htb> Find-InterestingDomainAcl`
+
+grande problema e' che c'e' troppa roba per guardarla tutta
+
+### Ricerca di ACL per un utente
+`PS C:\htb> Import-Module .\PowerView.ps1`
+
+`$sid = Convert-NameToSid wley`, prendiamo sid del tipo
+
+`PS C:\htb> Get-DomainObjectACL -Identity * | ? {$_.SecurityIdentifier -eq $sid}`, ricerca tramite quel sid
+
+
+dall' output non si capisce na sega perche' il GUID non e' human readable
+
+### Leggiamo info sul GUID
+```
+PS C:\htb> $guid= "00299570-246d-11d0-a768-00aa006e0529"
+PS C:\htb> Get-ADObject -SearchBase "CN=Extended-Rights,$((Get-ADRootDSE).ConfigurationNamingContext)" -Filter {ObjectClass -like 'ControlAccessRight'} -Properties * |Select Name,DisplayName,DistinguishedName,rightsGuid| ?{$_.rightsGuid -eq $guid} | fl
+```
+### Oppure cerchiamo ACL e scrivi GUID one-liner
+`PS C:\htb> Get-DomainObjectACL -ResolveGUIDs -Identity * | ? {$_.SecurityIdentifier -eq $sid} `
+
+### creating a list of domain users
+`PS C:\htb> Get-ADUser -Filter * | Select-Object -ExpandProperty SamAccountName > ad_users.txt`
+
+### For loop for enumerate ACl of users
+`PS C:\htb> foreach($line in [System.IO.File]::ReadLines("C:\Users\htb-student\Desktop\ad_users.txt")) {get-acl  "AD:\$(Get-ADUser $line)" | Select-Object Path -ExpandProperty Access | Where-Object {$_.IdentityReference -match 'INLANEFREIGHT\\wley'}}`
+
+### Further enumeration using damundsen
+```
+PS C:\htb> $sid2 = Convert-NameToSid damundsen
+PS C:\htb> Get-DomainObjectACL -ResolveGUIDs -Identity * | ? {$_.SecurityIdentifier -eq $sid2} -Verbose
+```
+
+
+### Checking for nesting
+Let's look and see if this group is nested into any other groups, remembering that nested group membership will mean that any users in group A will inherit all rights of any group that group A is nested into (a member of). A quick search shows us that the Help Desk Level 1 group is nested into the Information Technology group, meaning that we can obtain any rights that the Information Technology group grants to its members if we just add ourselves to the Help Desk Level 1 group where our user damundsen has GenericWrite privileges.
+
+
+`PS C:\htb> Get-DomainGroup -Identity "Help Desk Level 1" | select memberof`
+
+
+## Enumerating ACLs with BloodHound
+
+Node info
