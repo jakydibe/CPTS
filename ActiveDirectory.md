@@ -925,3 +925,63 @@ Comunque prima di craccare su hashcat checka sempre come inizia per la modalita'
 Questa flag richiede un ticket RC4 anche se RC4 non e' esplicitamente supportato
 
 Questo downgrade forzato non funziona contro Domain Controller Windows server 2019
+
+
+# ACL Abuse
+
+I permessi in AD sono controllati tramite le ACL. Una piccola misconfigurazione in ACL puo' portare a serie vulnerabilita'.
+
+Ogni entry di una ACL e' una **ACE**. 
+
+Ogni **ACE** MAPPA un utente/ un gruppo/ un processo e definisce i diritti di quell'utente.
+
+Ogni oggetto ha un ACL, but puo' averne anche di piu', soprattuotto in un AD.
+
+## Due tipi di ACL
+
+### DACL 
+Discretionary access control list, definiscono quali cose sono permesse o negate ad un oggetto. le DACLs sono fatte di ACE che permettono o negano accesso. Quando qualcuno prova ad accedere ad un oggetto il sistema controlla la DACL per il livello di accesso permesso. Se non esiste la DACL per un oggetto chiunque prova ad accederci ha PIENI POTERI. Se la DACL esiste ma nn ha entry ACE il sistema NEGA ACCESSO A TUTTI.
+
+### SACL
+System Access Control Lists permettono agli amminsitratori di loggare tentativi di accesso a oggetti sicuri.
+
+## 3 tipi di ACE
+
+- Access Denied ACE/ specifica che un utente/gruppo ha accesso esplicitamente negato
+- Access Allowed ACE
+- System audit ACE. usato dalle SACL per generare audit log wuando questo uutente accede a questo oggetto. si salva se accesso e' stato garantito o no.
+
+## Struttura semplice di ACE
+- SID dell' utente/gruppo che ha accesso all'oggetto
+- Una flag che denota il tipo di ACE
+- Un set di flag che specificano se i oggetti figli possono ereditare le ACE entry del parent (tipo processi figli)
+- Una access mask di 32 bit che definisce diritti su un oggetto
+
+
+Le ACE si possono enumerare con tool tipo BloodHound e abusare con tool tipo PowerView
+
+![image](https://github.com/user-attachments/assets/b0d58f73-7a40-4dd1-b598-7c0cac2b64aa)
+
+
+## Alcuni tipi di ACE
+
+### ForceChangePassword 
+ci da permessi di resettare password di un utente senza conoscerla
+
+### GenericWrite
+Permessi di scrittura su ogni attributo non protetto di un oggtto. Se abbiamo questo su un utente possiamo assegnargli un SPN e fare un kerberoasting attack. Su un gruppo possiamo aggiungerci al gruppo.
+
+### AddSelf
+mostra i security groups a cui un utente si puo' aggiungere
+
+### GenericAll
+Questo ci da controllo totale su un oggetto.
+
+If we have this access over a computer object and the Local Administrator Password Solution (LAPS) is in use in the environment, we can read the LAPS password and gain local admin access to the machine which may aid us in lateral movement or privilege escalation in the domain if we can obtain privileged controls or gain some sort of privileged access.
+
+
+## attacchi tipici
+![image](https://github.com/user-attachments/assets/c14ff24b-1060-4c15-9c5c-5df366ae816a)
+
+
+![image](https://github.com/user-attachments/assets/5b313170-4737-41b7-a890-3a057d0dd43b)
